@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: forex-pulse-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+      - key: FOREX_PROVIDER_URL
+        value: https://api.frankfurter.dev/v1
+      - key: PROVIDER_TIMEOUT_SECONDS
+        value: "12"
+      - key: PROVIDER_RETRY_ATTEMPTS
+        value: "3"
+      - key: MOCK_DATA_ENABLED
+        value: "false"
+      - key: NOTIFICATION_MOCK_ENABLED
+        value: "true"
+      - key: NOTIFICATION_RETRY_ATTEMPTS
+        value: "2"
+      - key: FEATURE_MACRO_CALENDAR_ENABLED
+        value: "false"
+      - key: FEATURE_NEWS_SENTIMENT_ENABLED
+        value: "false"
+      - key: DATABASE_URL
+        sync: false
+      - key: EXPO_PUSH_ACCESS_TOKEN
+        sync: false
+      - key: FIREBASE_CREDENTIALS_PATH
+        sync: false

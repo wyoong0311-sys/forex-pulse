@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+__pycache__/
+*.pyc
+backend/.venv/
+backend/*.db
+backend/firebase-service-account.json
+mobile/.env
+mobile/export-check/
+mobile/export-check-*/
+tools/cloudflared.exe
+tools/cloudflared.log
+tools/*.zip
+.playwright-cli/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
