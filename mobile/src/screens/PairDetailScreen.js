@@ -1,14 +1,19 @@
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, Text, View } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import { MetricCard } from '../components/MetricCard'
-import { PriceSparkline } from '../components/PriceSparkline'
+import React, { useEffect, useMemo, useState } from 'react'
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native'
+import { ConfidenceBadge } from '../components/ConfidenceBadge'
+import { DirectionChip } from '../components/DirectionChip'
+import { ModelTrustCard } from '../components/ModelTrustCard'
 import { ForecastCard } from '../components/ForecastCard'
 import { AccuracyCard } from '../components/AccuracyCard'
 import { AlertForm } from '../components/AlertForm'
 import { Badge } from '../components/Badge'
-import { DirectionChip } from '../components/DirectionChip'
-import { Screen } from '../components/Screen'
+import { PriceSparkline } from '../components/PriceSparkline'
 import { DATE_RANGES } from '../constants/pairs'
 import { createPriceAlert, loadAlerts } from '../services/alertService'
 import {
@@ -19,7 +24,34 @@ import {
 } from '../services/forexService'
 import { loadSymbolPerformance } from '../services/performanceService'
 import { colors } from '../theme/colors'
-import { sharedStyles } from '../theme/styles'
+
+function InfoCard({ title, children }) {
+  return (
+    <View
+      style={{
+        backgroundColor: '#131a2b',
+        borderRadius: 22,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: colors.borderSoft,
+      }}
+    >
+      <Text style={{ color: colors.text, fontSize: 17, fontWeight: '900' }}>{title}</Text>
+      <View style={{ marginTop: 12 }}>{children}</View>
+    </View>
+  )
+}
+
+function KeyValueRow({ label, value }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
+      <Text style={{ color: '#9fb0cc', fontSize: 14 }}>{label}</Text>
+      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '800', marginLeft: 16, textAlign: 'right' }}>
+        {value}
+      </Text>
+    </View>
+  )
+}
 
 export function PairDetailScreen({ route }) {
   const pair = route.params?.pair ?? 'EUR/USD'
@@ -41,14 +73,11 @@ export function PairDetailScreen({ route }) {
         loadPredictionCached(pair),
       ])
       if (active && (cachedDetail || cachedPrediction)) {
-        if (cachedDetail) {
-          setDetail(cachedDetail)
-        }
-        if (cachedPrediction) {
-          setPrediction(cachedPrediction)
-        }
+        if (cachedDetail) setDetail(cachedDetail)
+        if (cachedPrediction) setPrediction(cachedPrediction)
         setStale(true)
       }
+
       try {
         const [freshDetail, freshPrediction] = await Promise.all([
           loadPairDetail(pair, range),
@@ -60,11 +89,17 @@ export function PairDetailScreen({ route }) {
           setStale(false)
         }
       } catch {
-        if (active) {
-          setStale(true)
-        }
+        if (active) setStale(true)
       }
-      loadSymbolPerformance(pair.replace('/', '')).then(setPerformance).catch(() => setPerformance(null))
+
+      loadSymbolPerformance(pair.replace('/', ''))
+        .then((data) => {
+          if (active) setPerformance(data)
+        })
+        .catch(() => {
+          if (active) setPerformance(null)
+        })
+
       loadAlerts(1)
         .then((alerts) => {
           if (active) {
@@ -72,27 +107,14 @@ export function PairDetailScreen({ route }) {
           }
         })
         .catch(() => {
-          if (active) {
-            setPairAlerts([])
-          }
+          if (active) setPairAlerts([])
         })
     })()
+
     return () => {
       active = false
     }
   }, [pair, range])
-
-  if (!detail || !prediction) {
-    return (
-      <Screen>
-        <ActivityIndicator color={colors.accent} />
-        <View style={[sharedStyles.card, { marginTop: 14, gap: 10 }]}>
-          <View style={{ width: '48%', height: 14, borderRadius: 999, backgroundColor: colors.panelAlt }} />
-          <View style={{ width: '72%', height: 12, borderRadius: 999, backgroundColor: colors.panelAlt }} />
-        </View>
-      </Screen>
-    )
-  }
 
   async function submitAlert() {
     const fallbackPrice = prediction?.projectedHigh ?? detail?.latestPrice
@@ -111,134 +133,172 @@ export function PairDetailScreen({ route }) {
     }
   }
 
-  const confidencePct = Math.round(prediction.confidence * 100)
+  if (!detail || !prediction) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0b1020', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator color={colors.accent} />
+        <Text style={{ color: colors.muted, marginTop: 10 }}>Loading pair intelligence...</Text>
+      </View>
+    )
+  }
+
+  const updateTimeText = detail.capturedAt ? new Date(detail.capturedAt).toLocaleString() : 'Waiting for sync'
   const latestScore = performance?.latest
-  const baselineScore = [...(performance?.comparisons ?? [])]
+  const comparisons = performance?.comparisons ?? []
+  const baselineScore = comparisons
     .filter((item) => item.model_name?.includes('baseline') && item.samples_used > 0)
     .sort((a, b) => a.mae - b.mae)[0]
-  const updateTimeText = detail.capturedAt ? new Date(detail.capturedAt).toLocaleString() : 'Waiting for sync'
-  const indicatorCopy = [
-    `Observed range: ${detail.projectedRange}`,
-    `Expected move: ${prediction.expectedMovePct}%`,
-    `Source: ${detail.source}${detail.fallbackUsed ? ' fallback' : ''}`,
-    `Model: ${prediction.modelVersion}`,
-  ]
+  const bestScored = comparisons
+    .filter((item) => item.samples_used > 0)
+    .sort((a, b) => a.mae - b.mae)
+  const beatBaselineCount = bestScored.filter((item) => item.beats_baseline).length
+  const confidenceDelta =
+    prediction.confidence == null || baselineScore == null
+      ? null
+      : (prediction.confidence * 100) - 50
+
+  const explanation = useMemo(() => {
+    const lines = []
+    lines.push(prediction.direction === 'bullish' ? 'Recent trend is leaning upward.' : prediction.direction === 'bearish' ? 'Recent trend is leaning downward.' : 'Recent trend is relatively flat.')
+    lines.push(
+      Number(prediction.expectedMovePct) > 0.5
+        ? 'Expected move is elevated versus recent baseline.'
+        : 'Expected move is currently moderate.'
+    )
+    lines.push(
+      detail.fallbackUsed
+        ? 'This forecast includes fallback market data handling.'
+        : 'This forecast is based on stored provider market data.'
+    )
+    return lines.join(' ')
+  }, [prediction, detail])
 
   return (
-    <Screen>
-      <LinearGradient
-        colors={['#173a5f', '#081525']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          borderRadius: 34,
-          borderColor: colors.border,
-          borderWidth: 1,
-          padding: 22,
-          gap: 18,
-        }}
-      >
-        <View style={[sharedStyles.row, { alignItems: 'flex-start' }]}>
-          <View>
-            <Text style={{ color: colors.mutedStrong, fontSize: 13, fontWeight: '800', letterSpacing: 1.4 }}>
-              PAIR DETAIL
-            </Text>
-            <Text style={{ color: colors.text, fontSize: 36, fontWeight: '900', marginTop: 8 }}>{pair}</Text>
-          </View>
-          <DirectionChip direction={prediction.direction} />
-        </View>
-
+    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+      <View style={{ marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
-          <Text style={{ color: colors.text, fontSize: 42, fontWeight: '900' }}>{detail.latestPrice}</Text>
-          <Text style={{ color: detail.dailyChangePct >= 0 ? colors.up : colors.down, marginTop: 4, fontWeight: '800' }}>
-            {detail.dailyChangePct > 0 ? '+' : ''}
+          <Text style={{ color: '#91a2c4', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 }}>
+            {pair.replace('/', '')}
+          </Text>
+          <Text style={{ color: colors.text, fontSize: 36, fontWeight: '900', marginTop: 8 }}>
+            {detail.latestPrice.toFixed(4)}
+          </Text>
+          <Text
+            style={{
+              color: detail.dailyChangePct >= 0 ? colors.up : colors.down,
+              fontSize: 15,
+              fontWeight: '800',
+              marginTop: 8,
+            }}
+          >
+            {detail.dailyChangePct >= 0 ? '+' : ''}
             {detail.dailyChangePct.toFixed(2)}% today
           </Text>
         </View>
-
-        <Text style={{ color: colors.mutedStrong, lineHeight: 21 }}>
-          Updated from {detail.source}. Forecast is separated from actual market history and is not financial advice.
-        </Text>
-        <Text style={{ color: colors.muted, fontSize: 12 }}>Last update: {updateTimeText}</Text>
-      </LinearGradient>
-      {stale ? <Text style={{ color: colors.muted }}>Showing cached pair data while backend refreshes.</Text> : null}
-
-      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-        {DATE_RANGES.map((item) => (
-          <Pressable
-            key={item.value}
-            onPress={() => setRange(item.value)}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 999,
-              backgroundColor: range === item.value ? colors.accent : colors.panel,
-              borderColor: colors.border,
-              borderWidth: 1,
-            }}
-          >
-            <Text style={{ color: range === item.value ? colors.page : colors.text, fontWeight: '700' }}>
-              {item.label}
-            </Text>
-          </Pressable>
-        ))}
+        <View style={{ alignItems: 'flex-end' }}>
+          <ConfidenceBadge confidence={prediction.confidence} />
+          <View style={{ height: 10 }} />
+          <DirectionChip direction={prediction.direction} />
+        </View>
       </View>
 
-      <View style={[sharedStyles.card, { paddingBottom: 22 }]}>
-        <View style={[sharedStyles.row, { marginBottom: 8 }]}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '900' }}>Actual vs forecast</Text>
-          <Badge label={range.toUpperCase()} tone="neutral" />
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          <Badge label="Actual (solid)" tone="neutral" />
-          <Badge label="Forecast (dashed)" tone="forecast" />
-        </View>
-        <PriceSparkline
-          values={detail.history}
-          prediction={prediction.predictedNextClose ? [prediction.predictedNextClose] : detail.prediction}
-          showLegend
-        />
-        <Text style={{ color: colors.muted, marginTop: 8 }}>
-          Solid line is stored market data. Dashed amber line is the forecast target.
+      <Text style={{ color: '#7d8799', fontSize: 12, marginTop: 12, marginBottom: 14 }}>
+        Last updated: {updateTimeText}
+      </Text>
+      {stale || detail.isStale ? (
+        <Text style={{ color: '#ffd27a', marginBottom: 10 }}>
+          Data is delayed. Displaying cached data while backend refreshes.
         </Text>
-      </View>
+      ) : null}
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        <MetricCard label="Direction" value={prediction.direction} tone={prediction.direction === 'bearish' ? 'down' : prediction.direction === 'bullish' ? 'up' : 'warning'} />
-        <MetricCard label="Confidence" value={`${confidencePct}%`} tone="up" />
-        <MetricCard label="Projected Range" value={`${prediction.projectedLow} - ${prediction.projectedHigh}`} />
-        <MetricCard label="Expected Move" value={`${prediction.expectedMovePct}%`} />
+      <View
+        style={{
+          backgroundColor: '#131a2b',
+          borderRadius: 24,
+          padding: 16,
+          marginBottom: 14,
+          borderWidth: 1,
+          borderColor: colors.borderSoft,
+        }}
+      >
+        <View style={{ marginBottom: 14 }}>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900' }}>Actual vs forecast</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12 }}>
+            {DATE_RANGES.map((item) => (
+              <Pressable
+                key={item.value}
+                onPress={() => setRange(item.value)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  backgroundColor: range === item.value ? '#2b78ff' : '#0f1524',
+                  marginRight: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <Text style={{ color: range === item.value ? '#fff' : '#9ca3af', fontSize: 12, fontWeight: '800' }}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={{ borderRadius: 18, backgroundColor: '#0f1524', padding: 12 }}>
+          <PriceSparkline
+            values={detail.history}
+            prediction={prediction.predictedNextClose ? [prediction.predictedNextClose] : detail.prediction}
+            showLegend
+          />
+          <Text style={{ color: '#8ea0c0', fontSize: 12, textAlign: 'center', marginTop: 8 }}>
+            Solid line = actual · Dashed line = forecast
+          </Text>
+        </View>
       </View>
 
       <ForecastCard prediction={prediction} />
+      <View style={{ height: 12 }} />
 
-      <AccuracyCard latest={latestScore} baseline={baselineScore} title="Accuracy card" />
-
-      <View style={sharedStyles.card}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 10 }}>
-          Indicator summary
-        </Text>
-        {indicatorCopy.map((item) => (
-          <Text key={item} style={{ color: colors.muted, lineHeight: 21, marginBottom: 6 }}>
-            {item}
-          </Text>
-        ))}
+      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+        <View style={{ flex: 1 }}>
+          <InfoCard title="Indicators">
+            <KeyValueRow label="Volatility" value={detail.isStale ? 'Delayed context' : 'Moderate'} />
+            <KeyValueRow label="Momentum" value={prediction.direction === 'bullish' ? 'Positive' : prediction.direction === 'bearish' ? 'Negative' : 'Neutral'} />
+            <KeyValueRow label="Expected move" value={`${prediction.expectedMovePct}%`} />
+            <KeyValueRow label="Trend" value={`${prediction.direction} short-term`} />
+          </InfoCard>
+        </View>
+        <View style={{ flex: 1 }}>
+          <AccuracyCard latest={latestScore} baseline={baselineScore} title="Accuracy" />
+        </View>
       </View>
 
-      <View style={sharedStyles.card}>
-        <View style={[sharedStyles.row, { marginBottom: 10 }]}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900' }}>Alert controls</Text>
+      <ModelTrustCard
+        beatBaselineCount={beatBaselineCount}
+        totalRuns={bestScored.length || 0}
+        directionalAccuracy={latestScore?.directional_accuracy ?? null}
+        confidenceDelta={confidenceDelta}
+      />
+
+      <View style={{ height: 12 }} />
+      <InfoCard title="Why this forecast">
+        <Text style={{ color: '#d6deee', fontSize: 14, lineHeight: 22 }}>{explanation}</Text>
+      </InfoCard>
+
+      <View style={{ height: 12 }} />
+      <InfoCard title="Alerts">
+        <View style={{ marginBottom: 10 }}>
           <Badge label={`${pairAlerts.length} active`} tone={pairAlerts.length ? 'up' : 'neutral'} />
         </View>
-        {pairAlerts.length ? (
-          pairAlerts.slice(0, 2).map((item) => (
-            <Text key={item.id} style={{ color: colors.muted, marginBottom: 6 }}>
-              {item.alert_type} {item.target_price}
+        {pairAlerts.slice(0, 1).map((item) => (
+          <View key={item.id} style={{ backgroundColor: '#0f1524', borderRadius: 16, padding: 14, marginBottom: 10 }}>
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>Active alert</Text>
+            <Text style={{ color: '#b6c0d4', fontSize: 13, marginTop: 8 }}>
+              Notify when {pair.replace('/', '/')} {item.alert_type.replace('_', ' ')} {item.target_price}
             </Text>
-          ))
-        ) : (
-          <Text style={{ color: colors.muted, marginBottom: 10 }}>No active alerts for this pair yet.</Text>
-        )}
+          </View>
+        ))}
         <AlertForm
           alertType={alertType}
           targetPrice={targetPrice}
@@ -246,8 +306,8 @@ export function PairDetailScreen({ route }) {
           onChangeTargetPrice={setTargetPrice}
           onSubmit={submitAlert}
         />
-      </View>
-      {alertStatus ? <Text style={{ color: colors.muted }}>{alertStatus}</Text> : null}
-    </Screen>
+      </InfoCard>
+      {alertStatus ? <Text style={{ color: colors.muted, marginTop: 10 }}>{alertStatus}</Text> : null}
+    </ScrollView>
   )
 }

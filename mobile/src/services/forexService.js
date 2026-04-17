@@ -6,6 +6,18 @@ function normalizePair(pair) {
   return pair.replace('/', '').toUpperCase()
 }
 
+function isStale(capturedAt, maxAgeMinutes = 90) {
+  if (!capturedAt) {
+    return false
+  }
+  const captured = new Date(capturedAt).getTime()
+  if (Number.isNaN(captured)) {
+    return false
+  }
+  const ageMs = Date.now() - captured
+  return ageMs > maxAgeMinutes * 60 * 1000
+}
+
 function dashboardKey(symbols) {
   return `dashboard:${symbols}`
 }
@@ -56,6 +68,7 @@ export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
           0,
         source: rate.source,
         capturedAt: rate.captured_at,
+        isStale: isStale(rate.captured_at),
       })),
       highlights: [
         { label: 'Rate source', value: data.rates[0]?.source ?? 'backend', tone: 'up' },
@@ -101,6 +114,7 @@ export async function loadPairDetail(pair, range = '30d') {
       prediction: [],
       source: latest.source,
       capturedAt: latest.captured_at,
+      isStale: isStale(latest.captured_at),
       fallbackUsed: historyData.fallback_used,
     }
     await writeCache(pairDetailKey(pair, range), payload)
