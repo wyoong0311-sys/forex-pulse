@@ -72,3 +72,26 @@ That profile produces an Android App Bundle (`.aab`).
 For a full pre-build checklist, see:
 
 - [../docs/APK_BUILD_READY_CHECKLIST.md](../docs/APK_BUILD_READY_CHECKLIST.md)
+
+## Free CI APK build (no Expo build quota)
+
+This repo includes a GitHub Actions workflow that builds a debug APK without EAS build:
+
+- Workflow: `.github/workflows/android-apk-free.yml`
+- Trigger: manual (`workflow_dispatch`) or push to `main` with mobile changes
+- Output: GitHub Actions artifact `forex-pulse-debug-apk`
+
+### Required GitHub secrets
+
+Set these in your GitHub repo: `Settings` -> `Secrets and variables` -> `Actions`:
+
+- `EXPO_PUBLIC_API_BASE_URL`
+  - Example: `https://forex-pulse-api.onrender.com`
+
+### Optional secrets (for auto distribution to phones)
+
+- `FIREBASE_APP_ID`
+- `FIREBASE_SERVICE_ACCOUNT`
+  - Full JSON service account content as a single secret value
+
+If optional Firebase secrets are set, each APK build can be uploaded automatically to Firebase App Distribution.
