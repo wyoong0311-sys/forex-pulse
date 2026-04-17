@@ -32,6 +32,9 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Install dependencies
         run: npm ci
 
@@ -51,12 +54,13 @@ jobs:
           } >> .env
 
       - name: Generate native Android project
-        run: npx expo prebuild --platform android --non-interactive
+        run: CI=1 npx expo prebuild --platform android
 
       - name: Build debug APK
         run: |
           cd android
-          ./gradlew assembleDebug
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
