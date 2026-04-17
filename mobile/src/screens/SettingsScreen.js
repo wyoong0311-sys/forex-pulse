@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { Pressable, Switch, Text, TextInput, View } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import { registerDeviceTokenWithBackend } from '../services/notifications'
-import { loadDailySummary, loadPreferences, savePreferences } from '../services/userService'
-import { Screen } from '../components/Screen'
-import { SectionHeader } from '../components/SectionHeader'
+import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native'
 import { Badge } from '../components/Badge'
 import { SummaryCard } from '../components/SummaryCard'
-import { sharedStyles } from '../theme/styles'
+import { registerDeviceTokenWithBackend } from '../services/notifications'
+import { loadDailySummary, loadPreferences, savePreferences } from '../services/userService'
 import { colors } from '../theme/colors'
 
 export function SettingsScreen() {
@@ -25,8 +21,12 @@ export function SettingsScreen() {
   })
 
   async function connectPush() {
-    const result = await registerDeviceTokenWithBackend(1)
-    setPushStatus(result.token ? `Connected: ${result.token.slice(0, 18)}...` : result.reason)
+    try {
+      const result = await registerDeviceTokenWithBackend(1)
+      setPushStatus(result.token ? `Connected: ${result.token.slice(0, 18)}...` : result.reason)
+    } catch {
+      setPushStatus('Push registration failed.')
+    }
   }
 
   async function save() {
@@ -52,60 +52,80 @@ export function SettingsScreen() {
         setDailySummary(summary)
         setSaveStatus('')
       } catch {
-        setSaveStatus('Using local default preferences until backend is available.')
+        setSaveStatus('Using local defaults until backend is available.')
       }
     }
-
     load()
   }, [])
 
   return (
-    <Screen>
-      <LinearGradient
-        colors={['#173553', '#081525']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ borderRadius: 32, borderColor: colors.border, borderWidth: 1, padding: 22, gap: 14 }}
+    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+      <View
+        style={{
+          backgroundColor: '#131a2b',
+          borderRadius: 24,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: colors.borderSoft,
+          marginTop: 10,
+        }}
       >
-        <View style={sharedStyles.row}>
-          <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={{ color: colors.mutedStrong, fontSize: 13, fontWeight: '800', letterSpacing: 1.4 }}>SETTINGS</Text>
-            <Text style={{ color: colors.text, fontSize: 32, fontWeight: '900', marginTop: 8 }}>Your control room</Text>
-          </View>
-          <Badge label="Saved" tone="forecast" />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ color: colors.text, fontSize: 28, fontWeight: '900' }}>Settings</Text>
+          <Badge label="Profile 1" tone="forecast" />
         </View>
-        <Text style={{ color: colors.mutedStrong, lineHeight: 21 }}>
-          Notifications, refresh cadence, and daily summaries stay tied to your local user profile.
+        <Text style={{ color: colors.muted, marginTop: 8, lineHeight: 20 }}>
+          Notifications, refresh cadence, summary schedule, and trust context.
         </Text>
-      </LinearGradient>
+      </View>
 
-      <View style={sharedStyles.card}>
-        <SectionHeader title="Push notifications" subtitle="Register this device with the backend notification flow." />
-        <Text style={{ color: colors.muted, marginBottom: 16 }}>
-          This starter uses Expo notifications on-device. For production Android push, add Firebase Android credentials and backend device-token storage.
+      <View
+        style={{
+          marginTop: 12,
+          backgroundColor: '#131a2b',
+          borderRadius: 18,
+          padding: 15,
+          borderWidth: 1,
+          borderColor: colors.borderSoft,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '900', marginBottom: 8 }}>
+          Push registration
+        </Text>
+        <Text style={{ color: colors.muted, marginBottom: 12 }}>
+          Register this phone for alert notifications.
         </Text>
         <Pressable
           onPress={connectPush}
           style={{
-            backgroundColor: colors.panelAlt,
-            borderColor: colors.border,
-            borderWidth: 1,
-            borderRadius: 16,
-            paddingVertical: 14,
+            backgroundColor: '#2b78ff',
+            borderRadius: 14,
             alignItems: 'center',
-            marginBottom: 12,
+            paddingVertical: 12,
+            marginBottom: 10,
           }}
         >
-          <Text style={{ color: colors.text, fontWeight: '700' }}>Register Push</Text>
+          <Text style={{ color: '#fff', fontWeight: '900' }}>Register Push</Text>
         </Pressable>
         <Text style={{ color: colors.muted }}>{pushStatus}</Text>
       </View>
 
-      <View style={sharedStyles.card}>
-        <SectionHeader title="Saved preferences" subtitle="Personal settings persisted through the backend preferences endpoint." />
-        {saveStatus ? <Text style={{ color: colors.muted, marginBottom: 12 }}>{saveStatus}</Text> : null}
+      <View
+        style={{
+          marginTop: 12,
+          backgroundColor: '#131a2b',
+          borderRadius: 18,
+          padding: 15,
+          borderWidth: 1,
+          borderColor: colors.borderSoft,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '900', marginBottom: 8 }}>
+          Preferences
+        </Text>
+        {saveStatus ? <Text style={{ color: colors.muted, marginBottom: 8 }}>{saveStatus}</Text> : null}
 
-        <Text style={{ color: colors.muted, marginBottom: 6 }}>Refresh interval seconds</Text>
+        <Text style={{ color: colors.muted, marginBottom: 6 }}>Refresh interval (seconds)</Text>
         <TextInput
           value={`${preferences.refresh_interval_seconds}`}
           onChangeText={(value) => setPreferences((current) => ({ ...current, refresh_interval_seconds: value }))}
@@ -117,7 +137,8 @@ export function SettingsScreen() {
             borderRadius: 14,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            marginBottom: 14,
+            marginBottom: 12,
+            backgroundColor: '#0f1524',
           }}
         />
 
@@ -134,18 +155,19 @@ export function SettingsScreen() {
             borderRadius: 14,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            marginBottom: 14,
+            marginBottom: 12,
+            backgroundColor: '#0f1524',
           }}
         />
 
         {[
-          ['notifications_enabled', 'Notifications enabled'],
+          ['notifications_enabled', 'Notifications'],
           ['price_alerts_enabled', 'Price alerts'],
           ['forecast_alerts_enabled', 'Forecast alerts'],
           ['daily_summary_enabled', 'Daily summary'],
         ].map(([key, label]) => (
-          <View key={key} style={[sharedStyles.row, { marginBottom: 10 }]}>
-            <Text style={{ color: colors.muted }}>{label}</Text>
+          <View key={key} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Text style={{ color: colors.mutedStrong }}>{label}</Text>
             <Switch
               value={Boolean(preferences[key])}
               onValueChange={(value) => setPreferences((current) => ({ ...current, [key]: value }))}
@@ -156,27 +178,36 @@ export function SettingsScreen() {
         <Pressable
           onPress={save}
           style={{
-            backgroundColor: colors.panelAlt,
-            borderColor: colors.border,
-            borderWidth: 1,
-            borderRadius: 16,
-            paddingVertical: 14,
+            backgroundColor: '#161f36',
+            borderRadius: 14,
             alignItems: 'center',
-            marginTop: 8,
+            paddingVertical: 12,
+            marginTop: 4,
           }}
         >
-          <Text style={{ color: colors.text, fontWeight: '700' }}>Save Preferences</Text>
+          <Text style={{ color: colors.text, fontWeight: '800' }}>Save Preferences</Text>
         </Pressable>
       </View>
 
-      <View style={sharedStyles.card}>
-        <SectionHeader title="Daily summary preview" subtitle="Payload generated from your watchlist and insights." />
+      <View
+        style={{
+          marginTop: 12,
+          backgroundColor: '#131a2b',
+          borderRadius: 18,
+          padding: 15,
+          borderWidth: 1,
+          borderColor: colors.borderSoft,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '900', marginBottom: 8 }}>
+          Daily summary preview
+        </Text>
         {dailySummary ? (
           <>
-            <Text style={{ color: colors.muted, marginBottom: 8 }}>
+            <Text style={{ color: colors.muted }}>
               Sends at {dailySummary.summary_time} {dailySummary.timezone}
             </Text>
-            <Text style={{ color: colors.muted }}>
+            <Text style={{ color: colors.muted, marginTop: 6 }}>
               Watchlist: {dailySummary.watchlist.join(', ')}
             </Text>
           </>
@@ -189,8 +220,9 @@ export function SettingsScreen() {
         title="What forecasts mean"
         badge="Important"
         tone="warning"
-        body="Forecasts are model estimates with confidence and accuracy tracking. They are not guarantees, and they should not be read as buy or sell instructions."
+        body="Forecasts are analytical estimates based on historical patterns and model performance. They are not guaranteed outcomes."
+        style={{ marginTop: 12 }}
       />
-    </Screen>
+    </ScrollView>
   )
 }

@@ -1,37 +1,37 @@
-import React, { useEffect, useState } from 'react'
-import { Text, View } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import { AlertForm } from '../components/AlertForm'
-import { AlertCard } from '../components/AlertCard'
-import { Screen } from '../components/Screen'
-import { SectionHeader } from '../components/SectionHeader'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { Badge } from '../components/Badge'
-import { SummaryCard } from '../components/SummaryCard'
+import { AlertCard } from '../components/AlertCard'
 import { createPriceAlert, loadAlertLogs, loadAlerts } from '../services/alertService'
 import { useAppState } from '../state/AppContext'
 import { colors } from '../theme/colors'
-import { sharedStyles } from '../theme/styles'
 
 const USER_ID = 1
 
+const TYPES = [
+  ['above', 'Above target'],
+  ['below', 'Below target'],
+  ['crosses_above', 'Crosses above'],
+  ['crosses_below', 'Crosses below'],
+]
+
 export function AlertsScreen() {
   const { selectedPair } = useAppState()
+  const [symbol, setSymbol] = useState(selectedPair.replace('/', ''))
   const [alertType, setAlertType] = useState('above')
-  const [targetPrice, setTargetPrice] = useState('4.00')
+  const [targetPrice, setTargetPrice] = useState('')
   const [alerts, setAlerts] = useState([])
   const [logs, setLogs] = useState([])
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState('Loading alerts...')
 
   async function refresh() {
     try {
-      const [nextAlerts, nextLogs] = await Promise.all([
-        loadAlerts(USER_ID),
-        loadAlertLogs(USER_ID),
-      ])
-      setAlerts(nextAlerts)
-      setLogs(nextLogs)
+      const [nextAlerts, nextLogs] = await Promise.all([loadAlerts(USER_ID), loadAlertLogs(USER_ID)])
+      setAlerts(nextAlerts ?? [])
+      setLogs(nextLogs ?? [])
+      setStatus('')
     } catch {
-      setStatus('Backend unavailable. Alert list will refresh when API is reachable.')
+      setStatus('Backend unavailable. Alerts will sync when API is reachable.')
     }
   }
 
@@ -39,11 +39,11 @@ export function AlertsScreen() {
     try {
       await createPriceAlert({
         userId: USER_ID,
-        symbol: selectedPair,
+        symbol: symbol || selectedPair,
         alertType,
         targetPrice,
       })
-      setStatus('Alert saved to backend.')
+      setStatus('Alert saved.')
       await refresh()
     } catch {
       setStatus('Could not save alert yet. Check backend connection.')
@@ -54,61 +54,157 @@ export function AlertsScreen() {
     refresh()
   }, [])
 
+  const activeAlerts = alerts.filter((item) => item.is_active)
+  const recentLogs = useMemo(() => (logs ?? []).slice(0, 5), [logs])
+
   return (
-    <Screen>
-      <LinearGradient
-        colors={['#18395c', '#081525']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ borderRadius: 32, borderColor: colors.border, borderWidth: 1, padding: 22, gap: 14 }}
+    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+      <View
+        style={{
+          backgroundColor: '#131a2b',
+          borderRadius: 24,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: colors.borderSoft,
+          marginTop: 10,
+        }}
       >
-        <View style={sharedStyles.row}>
-          <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={{ color: colors.mutedStrong, fontSize: 13, fontWeight: '800', letterSpacing: 1.4 }}>ALERT CENTER</Text>
-            <Text style={{ color: colors.text, fontSize: 32, fontWeight: '900', marginTop: 8 }}>Stay ahead of moves</Text>
-          </View>
-          <Badge label={`${alerts.length} active`} tone={alerts.length ? 'up' : 'neutral'} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={{ color: colors.text, fontSize: 28, fontWeight: '900' }}>Alerts</Text>
+          <Badge label={`${activeAlerts.length} active`} tone={activeAlerts.length ? 'up' : 'neutral'} />
         </View>
-        <Text style={{ color: colors.mutedStrong, lineHeight: 21 }}>
-          Fast alert creation, trigger history, and notification readiness in one workflow.
+        <Text style={{ color: colors.muted, marginTop: 8, lineHeight: 20 }}>
+          Create alerts in seconds and monitor trigger history with delivery status.
         </Text>
-      </LinearGradient>
+      </View>
 
-      <AlertForm
-        alertType={alertType}
-        targetPrice={targetPrice}
-        onChangeAlertType={setAlertType}
-        onChangeTargetPrice={setTargetPrice}
-        onSubmit={submitAlert}
-      />
+      <View
+        style={{
+          backgroundColor: '#131a2b',
+          borderRadius: 22,
+          padding: 16,
+          marginTop: 12,
+          borderWidth: 1,
+          borderColor: colors.borderSoft,
+        }}
+      >
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 10 }}>Quick create</Text>
+        <Text style={{ color: colors.muted, marginBottom: 6 }}>Pair</Text>
+        <TextInput
+          value={symbol}
+          onChangeText={(value) => setSymbol(value.toUpperCase().replace('/', ''))}
+          placeholder="USDMYR"
+          placeholderTextColor={colors.muted}
+          style={{
+            color: colors.text,
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: 10,
+            backgroundColor: '#0f1524',
+          }}
+        />
 
-      {status ? <Text style={{ color: colors.muted }}>{status}</Text> : null}
+        <Text style={{ color: colors.muted, marginBottom: 8 }}>Condition</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+          {TYPES.map(([key, label]) => (
+            <Pressable
+              key={key}
+              onPress={() => setAlertType(key)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: alertType === key ? colors.accent : colors.border,
+                backgroundColor: alertType === key ? colors.accentSoft : '#0f1524',
+              }}
+            >
+              <Text
+                style={{
+                  color: alertType === key ? colors.accent : colors.mutedStrong,
+                  fontSize: 12,
+                  fontWeight: '800',
+                }}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
 
-      <View>
-        <SectionHeader title="Active alerts" subtitle="Rules stored in the backend and evaluated after rate updates." />
-        {alerts.length ? (
-          alerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
+        <Text style={{ color: colors.muted, marginBottom: 6 }}>Target price</Text>
+        <TextInput
+          value={targetPrice}
+          onChangeText={setTargetPrice}
+          placeholder="3.9900"
+          keyboardType="decimal-pad"
+          placeholderTextColor={colors.muted}
+          style={{
+            color: colors.text,
+            borderColor: colors.border,
+            borderWidth: 1,
+            borderRadius: 14,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            marginBottom: 12,
+            backgroundColor: '#0f1524',
+          }}
+        />
+        <Pressable
+          onPress={submitAlert}
+          style={{
+            backgroundColor: '#2b78ff',
+            paddingVertical: 14,
+            borderRadius: 16,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '900' }}>Save Alert</Text>
+        </Pressable>
+        {status ? <Text style={{ color: colors.muted, marginTop: 10 }}>{status}</Text> : null}
+      </View>
+
+      <View style={{ marginTop: 14 }}>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 10 }}>Active alerts</Text>
+        {activeAlerts.length ? (
+          activeAlerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
         ) : (
-          <SummaryCard
-            title="No active alerts yet"
-            body="Create one above. Start with a simple above/below rule before using forecast-based alerting."
-            badge="Empty"
-          />
+          <View style={{ backgroundColor: '#131a2b', borderRadius: 18, padding: 15 }}>
+            <Text style={{ color: colors.muted }}>No active alerts yet.</Text>
+          </View>
         )}
       </View>
 
-      <View style={sharedStyles.card}>
-        <SectionHeader title="Notification history" subtitle="Recent backend alert trigger logs." />
-        {logs.length ? (
-          logs.slice(0, 5).map((log) => (
-            <Text key={log.id} style={{ color: colors.muted, marginTop: 12, lineHeight: 20 }}>
-              {log.message}
-            </Text>
+      <View style={{ marginTop: 10 }}>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 10 }}>Alert history</Text>
+        {recentLogs.length ? (
+          recentLogs.map((log) => (
+            <View
+              key={log.id}
+              style={{
+                backgroundColor: '#131a2b',
+                borderRadius: 16,
+                padding: 14,
+                marginBottom: 8,
+                borderWidth: 1,
+                borderColor: colors.borderSoft,
+              }}
+            >
+              <Text style={{ color: '#b6c0d4', lineHeight: 20 }}>{log.message}</Text>
+              <Text style={{ color: '#7d8799', marginTop: 8, fontSize: 12 }}>
+                {log.sent_at ? new Date(log.sent_at).toLocaleString() : ''}
+              </Text>
+            </View>
           ))
         ) : (
-          <Text style={{ color: colors.muted, marginTop: 12 }}>No alert triggers logged yet.</Text>
+          <View style={{ backgroundColor: '#131a2b', borderRadius: 18, padding: 15 }}>
+            <Text style={{ color: colors.muted }}>No trigger logs yet.</Text>
+          </View>
         )}
       </View>
-    </Screen>
+    </ScrollView>
   )
 }

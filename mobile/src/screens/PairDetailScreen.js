@@ -252,7 +252,7 @@ export function PairDetailScreen({ route }) {
             showLegend
           />
           <Text style={{ color: '#8ea0c0', fontSize: 12, textAlign: 'center', marginTop: 8 }}>
-            Solid line = actual · Dashed line = forecast
+            Solid line = actual | Dashed line = forecast
           </Text>
         </View>
       </View>

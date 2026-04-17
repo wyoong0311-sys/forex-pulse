@@ -49,13 +49,13 @@ export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
       apiClient.getForecastSummary().catch(() => ({ results: [] })),
     ])
     const forecastBySymbol = new Map(
-      (forecastSummary?.results ?? []).map((item) => [item.symbol, item])
+      (forecastSummary?.results ?? []).map((item) => [item.symbol, item]),
     )
     const payload = {
       pairs: data.rates.map((rate) => ({
         ...(forecastBySymbol.get(rate.symbol)
           ? {
-              forecastLabel: `${forecastBySymbol.get(rate.symbol).direction} · ${forecastBySymbol.get(rate.symbol).volatility_regime}`,
+              forecastLabel: `${forecastBySymbol.get(rate.symbol).direction} | ${forecastBySymbol.get(rate.symbol).volatility_regime}`,
               forecast: forecastBySymbol.get(rate.symbol).predicted_close,
             }
           : {}),
@@ -74,7 +74,11 @@ export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
         { label: 'Rate source', value: data.rates[0]?.source ?? 'backend', tone: 'up' },
         { label: 'Tracked pairs', value: `${data.rates.length}`, tone: 'neutral' },
         { label: 'Prediction', value: 'Ranked', tone: 'warning' },
-        { label: 'Fallback', value: data.rates.some((rate) => rate.source.includes('mock')) ? 'Used' : 'Off', tone: 'up' },
+        {
+          label: 'Fallback',
+          value: data.rates.some((rate) => rate.source.includes('mock')) ? 'Used' : 'Off',
+          tone: 'up',
+        },
       ],
     }
     await writeCache(dashboardKey(symbols), payload)

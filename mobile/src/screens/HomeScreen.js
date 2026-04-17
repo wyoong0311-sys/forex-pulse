@@ -74,7 +74,7 @@ function WatchlistCard({ item, onPress }) {
 
       <View style={{ marginTop: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text style={{ color: moveColor, fontWeight: '800', fontSize: 15 }}>{changeText}</Text>
-        <DirectionChip direction={item.forecastLabel?.split('·')?.[0] ?? 'sideways'} />
+        <DirectionChip direction={item.forecastLabel?.split('|')?.[0] ?? 'sideways'} />
       </View>
 
       <View
