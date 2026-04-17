@@ -1,5 +1,7 @@
 import { StyleSheet } from 'react-native'
 import { colors } from './colors'
+import { radius } from './radius'
+import { spacing } from './spacing'
 
 export const sharedStyles = StyleSheet.create({
   screen: {
@@ -7,15 +9,15 @@ export const sharedStyles = StyleSheet.create({
     backgroundColor: colors.page,
   },
   content: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
-    paddingBottom: 32,
-    gap: 16,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
   },
   title: {
     color: colors.text,
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   subtitle: {
     color: colors.muted,
@@ -26,8 +28,8 @@ export const sharedStyles = StyleSheet.create({
     backgroundColor: colors.panel,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 26,
-    padding: 18,
+    borderRadius: radius.xxl,
+    padding: spacing.lg,
     shadowColor: '#000',
     shadowOpacity: 0.22,
     shadowRadius: 18,
@@ -38,8 +40,8 @@ export const sharedStyles = StyleSheet.create({
     backgroundColor: colors.panelAlt,
     borderColor: colors.borderSoft,
     borderWidth: 1,
-    borderRadius: 22,
-    padding: 16,
+    borderRadius: radius.xl,
+    padding: spacing.md,
   },
   row: {
     flexDirection: 'row',

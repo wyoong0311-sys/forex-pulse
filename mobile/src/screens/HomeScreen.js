@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,6 +11,9 @@ import { useDashboardData } from '../hooks/useDashboardData'
 import { ConfidenceBadge } from '../components/ConfidenceBadge'
 import { DirectionChip } from '../components/DirectionChip'
 import { Badge } from '../components/Badge'
+import { EmptyState } from '../components/EmptyState'
+import { LoadingState } from '../components/LoadingState'
+import { SectionHeader } from '../components/SectionHeader'
 import { useAppState } from '../state/AppContext'
 import { loadAlertLogs } from '../services/alertService'
 import { loadInsightsDashboard } from '../services/performanceService'
@@ -194,15 +196,10 @@ export function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>Watchlist</Text>
-        <Text style={{ color: '#7cc7ff', fontSize: 13, fontWeight: '700' }}>Manage</Text>
-      </View>
+      <SectionHeader title="Watchlist" actionLabel="Manage" />
 
       {loading && !data.pairs.length ? (
-        <View style={{ paddingVertical: 16 }}>
-          <ActivityIndicator color={colors.accent} />
-        </View>
+        <LoadingState title="Loading watchlist..." subtitle="Fetching rates and forecast confidence." />
       ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
@@ -217,6 +214,12 @@ export function HomeScreen({ navigation }) {
           />
         ))}
       </ScrollView>
+      {!loading && !data.pairs.length ? (
+        <EmptyState
+          title="Watchlist is empty"
+          body="Add a pair in Watchlist manager to start tracking live movement."
+        />
+      ) : null}
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, marginTop: 8 }}>
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>Market summary</Text>
@@ -306,9 +309,12 @@ export function HomeScreen({ navigation }) {
         </View>
       ))}
       {!notifications.length ? (
-        <View style={{ backgroundColor: '#131a2b', borderRadius: 18, padding: 15 }}>
-          <Text style={{ color: '#b6c0d4' }}>No recent notifications yet.</Text>
-        </View>
+        <EmptyState
+          title="No recent notifications"
+          body="Triggered alerts and summary messages will appear here."
+          actionLabel="Set alert"
+          onActionPress={() => navigation.getParent()?.navigate('Alerts')}
+        />
       ) : null}
 
       <View style={{ marginTop: 12, backgroundColor: '#131a2b', borderRadius: 18, padding: 15 }}>

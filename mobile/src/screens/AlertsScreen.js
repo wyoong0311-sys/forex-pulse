@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { Badge } from '../components/Badge'
 import { AlertCard } from '../components/AlertCard'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
+import { SectionHeader } from '../components/SectionHeader'
 import { createPriceAlert, loadAlertLogs, loadAlerts } from '../services/alertService'
 import { useAppState } from '../state/AppContext'
 import { colors } from '../theme/colors'
@@ -23,15 +27,22 @@ export function AlertsScreen() {
   const [alerts, setAlerts] = useState([])
   const [logs, setLogs] = useState([])
   const [status, setStatus] = useState('Loading alerts...')
+  const [isRefreshing, setIsRefreshing] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   async function refresh() {
+    setIsRefreshing(true)
     try {
       const [nextAlerts, nextLogs] = await Promise.all([loadAlerts(USER_ID), loadAlertLogs(USER_ID)])
       setAlerts(nextAlerts ?? [])
       setLogs(nextLogs ?? [])
       setStatus('')
+      setLoadError('')
     } catch {
       setStatus('Backend unavailable. Alerts will sync when API is reachable.')
+      setLoadError('Could not load alerts and logs from backend.')
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -77,6 +88,11 @@ export function AlertsScreen() {
           Create alerts in seconds and monitor trigger history with delivery status.
         </Text>
       </View>
+
+      {loadError ? <ErrorState title="Alerts unavailable" body={loadError} onActionPress={refresh} /> : null}
+      {isRefreshing && !alerts.length ? (
+        <LoadingState title="Loading alerts..." subtitle="Syncing active rules and trigger logs." />
+      ) : null}
 
       <View
         style={{
@@ -168,18 +184,16 @@ export function AlertsScreen() {
       </View>
 
       <View style={{ marginTop: 14 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 10 }}>Active alerts</Text>
+        <SectionHeader title="Active alerts" />
         {activeAlerts.length ? (
           activeAlerts.map((alert) => <AlertCard key={alert.id} alert={alert} />)
         ) : (
-          <View style={{ backgroundColor: '#131a2b', borderRadius: 18, padding: 15 }}>
-            <Text style={{ color: colors.muted }}>No active alerts yet.</Text>
-          </View>
+          <EmptyState title="No active alerts yet" body="Create your first alert in Quick create above." />
         )}
       </View>
 
       <View style={{ marginTop: 10 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 10 }}>Alert history</Text>
+        <SectionHeader title="Alert history" />
         {recentLogs.length ? (
           recentLogs.map((log) => (
             <View
@@ -200,9 +214,7 @@ export function AlertsScreen() {
             </View>
           ))
         ) : (
-          <View style={{ backgroundColor: '#131a2b', borderRadius: 18, padding: 15 }}>
-            <Text style={{ color: colors.muted }}>No trigger logs yet.</Text>
-          </View>
+          <EmptyState title="No trigger logs yet" body="Triggered alerts will appear here with timestamps." />
         )}
       </View>
     </ScrollView>

@@ -8,6 +8,22 @@ export function useDashboardData(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
     data: { pairs: [], highlights: [] },
   })
 
+  async function refresh() {
+    setState((previous) => ({ ...previous, loading: true }))
+    const cached = await loadDashboardCached(symbols)
+    if (cached) {
+      setState({ loading: true, stale: true, data: cached })
+    }
+    try {
+      const data = await loadDashboard(symbols)
+      setState({ loading: false, stale: false, data })
+      return data
+    } catch (error) {
+      setState((previous) => ({ ...previous, loading: false, stale: true }))
+      throw error
+    }
+  }
+
   useEffect(() => {
     let active = true
 
@@ -33,5 +49,5 @@ export function useDashboardData(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
     }
   }, [symbols])
 
-  return state
+  return { ...state, refresh }
 }

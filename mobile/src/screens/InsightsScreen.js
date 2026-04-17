@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
 import { Badge } from '../components/Badge'
 import { AccuracyCard } from '../components/AccuracyCard'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
+import { SectionHeader } from '../components/SectionHeader'
 import { SummaryCard } from '../components/SummaryCard'
 import { loadInsightsDashboard, loadPerformanceSummary, loadSymbolPerformance } from '../services/performanceService'
 import { colors } from '../theme/colors'
@@ -34,9 +38,12 @@ export function InsightsScreen() {
     forecasts: { results: [] },
   })
   const [status, setStatus] = useState('Loading insights...')
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     async function load() {
+      setIsLoading(true)
       try {
         const [summaryData, symbolData, insightsData] = await Promise.all([
           loadPerformanceSummary(),
@@ -47,8 +54,12 @@ export function InsightsScreen() {
         setSymbolPerformance(symbolData)
         setInsights(insightsData)
         setStatus('')
+        setLoadError('')
       } catch {
         setStatus('Performance data unavailable. Run backtests first.')
+        setLoadError('Insights and performance data could not be fetched.')
+      } finally {
+        setIsLoading(false)
       }
     }
     load()
@@ -104,7 +115,17 @@ export function InsightsScreen() {
         <StatPill label="Biggest forecast shift" value={largestShift ? largestShift.symbol : 'Waiting'} />
       </View>
 
-      {status ? <Text style={{ color: colors.muted, marginTop: 10 }}>{status}</Text> : null}
+      {loadError ? (
+        <View style={{ marginTop: 10 }}>
+          <ErrorState title="Insights unavailable" body={loadError} />
+        </View>
+      ) : null}
+      {isLoading ? (
+        <View style={{ marginTop: 10 }}>
+          <LoadingState title="Loading insights..." subtitle="Evaluating movers, volatility, and model rankings." />
+        </View>
+      ) : null}
+      {status && !isLoading ? <Text style={{ color: colors.muted, marginTop: 10 }}>{status}</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 10 }}>
         <SummaryCard
@@ -145,9 +166,7 @@ export function InsightsScreen() {
           borderColor: colors.borderSoft,
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '900', marginBottom: 8 }}>
-          Forecast board
-        </Text>
+        <SectionHeader title="Forecast board" />
         {forecastSummary.length ? (
           forecastSummary.map((item) => (
             <View key={item.symbol} style={{ marginBottom: 10 }}>
@@ -160,7 +179,7 @@ export function InsightsScreen() {
             </View>
           ))
         ) : (
-          <Text style={{ color: colors.muted }}>No forecast rows yet.</Text>
+          <EmptyState title="No forecast rows yet" body="Forecast board appears after prediction jobs complete." />
         )}
       </View>
 
@@ -174,9 +193,7 @@ export function InsightsScreen() {
           borderColor: colors.borderSoft,
         }}
       >
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '900', marginBottom: 8 }}>
-          Confidence leaderboard
-        </Text>
+        <SectionHeader title="Confidence leaderboard" />
         {bestBySymbol.length ? (
           bestBySymbol.map((item) => (
             <Text key={`${item.symbol}-${item.model_name}`} style={{ color: colors.muted, marginBottom: 8 }}>
@@ -184,7 +201,7 @@ export function InsightsScreen() {
             </Text>
           ))
         ) : (
-          <Text style={{ color: colors.muted }}>No rankings yet.</Text>
+          <EmptyState title="No rankings yet" body="Run backtesting to score and rank models per symbol." />
         )}
       </View>
     </ScrollView>

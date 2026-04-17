@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native'
 import { Badge } from '../components/Badge'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { SummaryCard } from '../components/SummaryCard'
 import { registerDeviceTokenWithBackend } from '../services/notifications'
 import { loadDailySummary, loadPreferences, savePreferences } from '../services/userService'
@@ -10,6 +13,8 @@ export function SettingsScreen() {
   const [pushStatus, setPushStatus] = useState('Not connected')
   const [saveStatus, setSaveStatus] = useState('Loading saved preferences...')
   const [dailySummary, setDailySummary] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [preferences, setPreferences] = useState({
     refresh_interval_seconds: 900,
     notifications_enabled: true,
@@ -46,13 +51,18 @@ export function SettingsScreen() {
 
   useEffect(() => {
     async function load() {
+      setIsLoading(true)
       try {
         const [saved, summary] = await Promise.all([loadPreferences(1), loadDailySummary(1)])
         setPreferences(saved)
         setDailySummary(summary)
         setSaveStatus('')
+        setLoadError('')
       } catch {
         setSaveStatus('Using local defaults until backend is available.')
+        setLoadError('Saved settings could not be loaded from backend.')
+      } finally {
+        setIsLoading(false)
       }
     }
     load()
@@ -78,6 +88,16 @@ export function SettingsScreen() {
           Notifications, refresh cadence, summary schedule, and trust context.
         </Text>
       </View>
+      {loadError ? (
+        <View style={{ marginTop: 12 }}>
+          <ErrorState title="Settings sync delayed" body={loadError} />
+        </View>
+      ) : null}
+      {isLoading ? (
+        <View style={{ marginTop: 12 }}>
+          <LoadingState title="Loading settings..." subtitle="Syncing preferences and daily summary profile." />
+        </View>
+      ) : null}
 
       <View
         style={{
@@ -212,7 +232,7 @@ export function SettingsScreen() {
             </Text>
           </>
         ) : (
-          <Text style={{ color: colors.muted }}>Summary payload unavailable.</Text>
+          <EmptyState title="Summary payload unavailable" body="Daily summary appears after summary scheduling is enabled." />
         )}
       </View>
 

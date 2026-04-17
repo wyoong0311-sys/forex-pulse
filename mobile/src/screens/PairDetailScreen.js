@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   Text,
@@ -13,6 +12,8 @@ import { ForecastCard } from '../components/ForecastCard'
 import { AccuracyCard } from '../components/AccuracyCard'
 import { AlertForm } from '../components/AlertForm'
 import { Badge } from '../components/Badge'
+import { EmptyState } from '../components/EmptyState'
+import { LoadingState } from '../components/LoadingState'
 import { PriceSparkline } from '../components/PriceSparkline'
 import { DATE_RANGES } from '../constants/pairs'
 import { createPriceAlert, loadAlerts } from '../services/alertService'
@@ -135,9 +136,11 @@ export function PairDetailScreen({ route }) {
 
   if (!detail || !prediction) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0b1020', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={colors.accent} />
-        <Text style={{ color: colors.muted, marginTop: 10 }}>Loading pair intelligence...</Text>
+      <View style={{ flex: 1, backgroundColor: '#0b1020', padding: 18, justifyContent: 'center' }}>
+        <LoadingState
+          title="Loading pair intelligence..."
+          subtitle="Collecting latest price, prediction, and accuracy context."
+        />
       </View>
     )
   }
@@ -299,6 +302,12 @@ export function PairDetailScreen({ route }) {
             </Text>
           </View>
         ))}
+        {!pairAlerts.length ? (
+          <EmptyState
+            title="No active alert"
+            body="Create an alert so we can notify you when this pair crosses your target."
+          />
+        ) : null}
         <AlertForm
           alertType={alertType}
           targetPrice={targetPrice}

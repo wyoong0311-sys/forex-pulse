@@ -1,8 +1,12 @@
 import React, { useMemo, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { Screen } from '../components/Screen'
 import { Badge } from '../components/Badge'
 import { PairCard } from '../components/PairCard'
+import { SectionHeader } from '../components/SectionHeader'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { useAppState } from '../state/AppContext'
 import { colors } from '../theme/colors'
@@ -22,7 +26,8 @@ export function MarketsScreen({ navigation }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('move')
-  const { data, loading, stale } = useDashboardData('USDMYR,EURUSD,GBPUSD,USDJPY')
+  const [marketError, setMarketError] = useState('')
+  const { data, loading, stale, refresh } = useDashboardData('USDMYR,EURUSD,GBPUSD,USDJPY')
   const { setSelectedPair } = useAppState()
 
   const pairs = useMemo(() => {
@@ -50,6 +55,15 @@ export function MarketsScreen({ navigation }) {
 
     return next
   }, [data.pairs, filter, query, sort])
+
+  async function retryRefresh() {
+    try {
+      setMarketError('')
+      await refresh()
+    } catch {
+      setMarketError('Could not refresh market data right now. Try again in a moment.')
+    }
+  }
 
   return (
     <Screen>
@@ -148,11 +162,19 @@ export function MarketsScreen({ navigation }) {
         </Pressable>
       </View>
 
-      {loading && !pairs.length ? (
-        <View style={{ backgroundColor: '#131a2b', borderRadius: 18, padding: 16 }}>
-          <Text style={{ color: colors.muted }}>Loading market rows...</Text>
-        </View>
+      {marketError ? (
+        <ErrorState
+          title="Market feed unavailable"
+          body={marketError}
+          onActionPress={retryRefresh}
+        />
       ) : null}
+
+      {loading && !pairs.length ? (
+        <LoadingState title="Refreshing market rows..." subtitle="Syncing rates, confidence, and trend context." />
+      ) : null}
+
+      <SectionHeader title="Available pairs" actionLabel="Refresh" onActionPress={retryRefresh} />
 
       {pairs.map((pair) => (
         <PairCard
@@ -165,9 +187,15 @@ export function MarketsScreen({ navigation }) {
         />
       ))}
       {!loading && !pairs.length ? (
-        <View style={{ backgroundColor: '#131a2b', borderRadius: 18, padding: 16 }}>
-          <Text style={{ color: colors.muted }}>No pairs match current filters.</Text>
-        </View>
+        <EmptyState
+          title="No pairs found"
+          body="No market pairs match the current search and filters."
+          actionLabel="Reset filters"
+          onActionPress={() => {
+            setQuery('')
+            setFilter('all')
+          }}
+        />
       ) : null}
     </Screen>
   )

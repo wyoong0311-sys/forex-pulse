@@ -53,14 +53,33 @@ export function RootNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
+          position: 'absolute',
+          left: 14,
+          right: 14,
+          bottom: 14,
           backgroundColor: colors.panel,
-          borderTopColor: colors.border,
-          height: 72,
+          borderTopColor: 'transparent',
+          borderTopWidth: 0,
+          borderRadius: 22,
+          height: 70,
           paddingBottom: 10,
           paddingTop: 10,
+          elevation: 18,
+          shadowColor: '#000',
+          shadowOpacity: 0.35,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 10 },
         },
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '800',
+          letterSpacing: 0.4,
+        },
+        tabBarItemStyle: {
+          borderRadius: 14,
+        },
       }}
     >
       <Tab.Screen name="Home" component={HomeStack} options={{ tabBarIcon: tabIcon('HOME') }} />
