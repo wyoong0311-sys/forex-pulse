@@ -7,13 +7,22 @@ function normalizePair(pair) {
 
 export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
   try {
-    const data = await apiClient.getLatestRates(symbols)
+    const [data, forecastSummary] = await Promise.all([
+      apiClient.getLatestRates(symbols),
+      apiClient.getForecastSummary().catch(() => ({ results: [] })),
+    ])
+    const confidenceBySymbol = new Map(
+      (forecastSummary?.results ?? []).map((item) => [
+        item.symbol,
+        item.performance_adjusted_confidence ?? item.raw_confidence ?? 0,
+      ])
+    )
     return {
       pairs: data.rates.map((rate) => ({
         symbol: `${rate.symbol.slice(0, 3)}/${rate.symbol.slice(3)}`,
         price: rate.close,
         change: 0,
-        confidence: 0,
+        confidence: confidenceBySymbol.get(rate.symbol) ?? 0,
         source: rate.source,
       })),
       highlights: [
