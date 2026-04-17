@@ -25,7 +25,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: "mobile/package-lock.json"
 
@@ -49,31 +49,59 @@ jobs:
           if [ -z "$API_URL" ]; then
             API_URL="https://forex-pulse-api.onrender.com"
           fi
+          APP_VERSION_CODE=$((GITHUB_RUN_NUMBER + 49))
+          APP_VERSION_NAME="1.0.${APP_VERSION_CODE}"
+          APP_DISPLAY_NAME="Forex Pulse ${APP_VERSION_CODE}"
+          echo "APP_VERSION_CODE=$APP_VERSION_CODE" >> "$GITHUB_ENV"
+          echo "APP_VERSION_NAME=$APP_VERSION_NAME" >> "$GITHUB_ENV"
+          echo "APP_DISPLAY_NAME=$APP_DISPLAY_NAME" >> "$GITHUB_ENV"
           {
             echo "EXPO_PUBLIC_API_BASE_URL=$API_URL"
-            echo "EXPO_PUBLIC_APP_NAME=Forex Pulse"
+            echo "EXPO_PUBLIC_APP_NAME=$APP_DISPLAY_NAME"
             echo "EXPO_PUBLIC_APP_SLUG=forex-pulse"
-            echo "EXPO_PUBLIC_APP_VERSION=1.0.0"
+            echo "EXPO_PUBLIC_APP_VERSION=$APP_VERSION_NAME"
             echo "EXPO_PUBLIC_EXPO_OWNER=teows-organization"
             echo "EXPO_PUBLIC_ANDROID_PACKAGE=com.forexpulse.mobile"
-            echo "EXPO_PUBLIC_ANDROID_VERSION_CODE=1"
+            echo "EXPO_PUBLIC_ANDROID_VERSION_CODE=$APP_VERSION_CODE"
             echo "EXPO_PUBLIC_EAS_PROJECT_ID=96db8ac6-5a48-442d-aff0-76f892fa108e"
+            echo "EXPO_PUBLIC_IOS_BUILD_NUMBER=$APP_VERSION_CODE"
           } >> .env
         env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
           EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
 
       - name: Expo prebuild (Android)
         run: CI=1 npx expo prebuild --platform android
 
       - name: Build release APK
+        continue-on-error: true
+        shell: bash
         run: |
+          set -o pipefail
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew clean assembleRelease --no-daemon --stacktrace --warning-mode all 2>&1 | tee ../gradle-build.log
 
-      - name: Upload release APK artifact
+      - name: Upload build logs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: forex-pulse-release-apk
+          name: forex-pulse-${{ env.APP_VERSION_CODE }}-build-logs
+          path: mobile/gradle-build.log
+          if-no-files-found: warn
+
+      - name: Upload release APK artifact
+        if: ${{ hashFiles('mobile/android/app/build/outputs/apk/release/app-release.apk') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: forex-pulse-${{ env.APP_VERSION_CODE }}-release-apk
           path: mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+      - name: Ensure release APK exists
+        shell: bash
+        run: |
+          if [ ! -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            echo "Release APK was not produced. Check uploaded build logs artifact."
+            exit 1
+          fi
