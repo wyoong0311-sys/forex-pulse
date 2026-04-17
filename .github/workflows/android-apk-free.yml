@@ -65,15 +65,15 @@ jobs:
       - name: Expo prebuild (Android)
         run: CI=1 npx expo prebuild --platform android
 
-      - name: Build debug APK
+      - name: Build release APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK artifact
+      - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: forex-pulse-debug-apk
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: forex-pulse-release-apk
+          path: mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
