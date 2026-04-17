@@ -36,19 +36,26 @@ export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
       apiClient.getLatestRates(symbols),
       apiClient.getForecastSummary().catch(() => ({ results: [] })),
     ])
-    const confidenceBySymbol = new Map(
-      (forecastSummary?.results ?? []).map((item) => [
-        item.symbol,
-        item.performance_adjusted_confidence ?? item.raw_confidence ?? 0,
-      ])
+    const forecastBySymbol = new Map(
+      (forecastSummary?.results ?? []).map((item) => [item.symbol, item])
     )
     const payload = {
       pairs: data.rates.map((rate) => ({
+        ...(forecastBySymbol.get(rate.symbol)
+          ? {
+              forecastLabel: `${forecastBySymbol.get(rate.symbol).direction} · ${forecastBySymbol.get(rate.symbol).volatility_regime}`,
+              forecast: forecastBySymbol.get(rate.symbol).predicted_close,
+            }
+          : {}),
         symbol: `${rate.symbol.slice(0, 3)}/${rate.symbol.slice(3)}`,
         price: rate.close,
         change: 0,
-        confidence: confidenceBySymbol.get(rate.symbol) ?? 0,
+        confidence:
+          forecastBySymbol.get(rate.symbol)?.performance_adjusted_confidence ??
+          forecastBySymbol.get(rate.symbol)?.raw_confidence ??
+          0,
         source: rate.source,
+        capturedAt: rate.captured_at,
       })),
       highlights: [
         { label: 'Rate source', value: data.rates[0]?.source ?? 'backend', tone: 'up' },

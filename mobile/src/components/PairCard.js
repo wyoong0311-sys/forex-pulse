@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { colors } from '../theme/colors'
 import { Badge } from './Badge'
+import { ConfidenceBadge } from './ConfidenceBadge'
 import { PriceSparkline } from './PriceSparkline'
 
 export function PairCard({ pair, onPress }) {
@@ -36,8 +37,11 @@ export function PairCard({ pair, onPress }) {
         <Text style={{ color: colors.text, fontSize: 30, fontWeight: '800' }}>{pair.price}</Text>
         <PriceSparkline values={sparkline} prediction={pair.forecast ? [pair.forecast] : []} compact />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ color: colors.muted }}>Confidence {Math.round((pair.confidence ?? 0) * 100)}%</Text>
-          <Badge label={pair.forecastLabel ?? 'Forecast ready'} tone="forecast" />
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 4 }}>Forecast signal</Text>
+            <Badge label={pair.forecastLabel ?? 'Forecast ready'} tone="forecast" />
+          </View>
+          <ConfidenceBadge confidence={pair.confidence} />
         </View>
       </LinearGradient>
     </Pressable>

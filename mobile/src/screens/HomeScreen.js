@@ -6,6 +6,7 @@ import { PairCard } from '../components/PairCard'
 import { Screen } from '../components/Screen'
 import { MetricCard } from '../components/MetricCard'
 import { Badge } from '../components/Badge'
+import { SummaryCard } from '../components/SummaryCard'
 import { useAppState } from '../state/AppContext'
 import { loadAlertLogs } from '../services/alertService'
 import { loadInsightsDashboard } from '../services/performanceService'
@@ -68,7 +69,13 @@ export function HomeScreen({ navigation }) {
   const strongest = insights?.movers?.strongest?.[0]
   const weakest = insights?.movers?.weakest?.[0]
   const forecast = insights?.forecasts?.results?.[0]
+  const bestConfidence = [...(insights?.forecasts?.results ?? [])].sort(
+    (a, b) => (b.performance_adjusted_confidence ?? b.raw_confidence ?? 0) - (a.performance_adjusted_confidence ?? a.raw_confidence ?? 0)
+  )[0]
   const volatilitySpike = insights?.volatility?.results?.find((item) => item.spike)
+  const latestCaptureText = data.pairs?.[0]?.capturedAt
+    ? new Date(data.pairs[0].capturedAt).toLocaleString()
+    : 'Waiting for sync'
   const sortedPairs = useMemo(() => {
     const pairs = [...data.pairs]
     if (sortMode === 'confidence') {
@@ -109,6 +116,9 @@ export function HomeScreen({ navigation }) {
         <Text style={{ color: colors.mutedStrong, lineHeight: 21 }}>
           Actual rates, ranked forecasts, alert history, and volatility context in one calm view.
         </Text>
+        <Text style={{ color: colors.muted, fontSize: 12 }}>
+          Latest sync: {latestCaptureText}
+        </Text>
 
         <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
           <Pressable
@@ -134,6 +144,42 @@ export function HomeScreen({ navigation }) {
         {data.highlights.map((item) => (
           <MetricCard key={item.label} label={item.label} value={item.value} tone={item.tone} />
         ))}
+      </View>
+
+      <View>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginBottom: 10 }}>Market summary</Text>
+        <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+          <SummaryCard
+            title="Strongest mover"
+            body={strongest ? `${formatSymbol(strongest.symbol)} moved ${strongest.change_pct}% on latest close.` : 'Waiting for mover data from backend.'}
+            badge={strongest ? formatSymbol(strongest.symbol) : 'Waiting'}
+            tone="up"
+            style={{ flex: 1, minWidth: '47%' }}
+          />
+          <SummaryCard
+            title="Weakest mover"
+            body={weakest ? `${formatSymbol(weakest.symbol)} moved ${weakest.change_pct}% on latest close.` : 'Waiting for mover data from backend.'}
+            badge={weakest ? formatSymbol(weakest.symbol) : 'Waiting'}
+            tone="down"
+            style={{ flex: 1, minWidth: '47%' }}
+          />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+          <SummaryCard
+            title="Volatility focus"
+            body={volatilitySpike ? `${formatSymbol(volatilitySpike.symbol)} is in ${volatilitySpike.regime}.` : 'No spike detected. Market is currently stable.'}
+            badge={volatilitySpike ? formatSymbol(volatilitySpike.symbol) : 'Normal'}
+            tone={volatilitySpike ? 'warning' : 'neutral'}
+            style={{ flex: 1, minWidth: '47%' }}
+          />
+          <SummaryCard
+            title="Best confidence"
+            body={bestConfidence ? `${formatSymbol(bestConfidence.symbol)} is ${bestConfidence.direction} with adjusted confidence ${Math.round((bestConfidence.performance_adjusted_confidence ?? bestConfidence.raw_confidence ?? 0) * 100)}%.` : 'Waiting for forecast confidence ranking.'}
+            badge={bestConfidence ? `${Math.round((bestConfidence.performance_adjusted_confidence ?? bestConfidence.raw_confidence ?? 0) * 100)}%` : 'Waiting'}
+            tone="forecast"
+            style={{ flex: 1, minWidth: '47%' }}
+          />
+        </View>
       </View>
 
       <View style={sharedStyles.card}>
