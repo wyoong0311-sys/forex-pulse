@@ -5,6 +5,7 @@ import { AlertCard } from '../components/AlertCard'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import { NotificationCard } from '../components/NotificationCard'
 import { SectionHeader } from '../components/SectionHeader'
 import { createPriceAlert, loadAlertLogs, loadAlerts } from '../services/alertService'
 import { useAppState } from '../state/AppContext'
@@ -196,22 +197,15 @@ export function AlertsScreen() {
         <SectionHeader title="Alert history" />
         {recentLogs.length ? (
           recentLogs.map((log) => (
-            <View
+            <NotificationCard
               key={log.id}
-              style={{
-                backgroundColor: '#131a2b',
-                borderRadius: 16,
-                padding: 14,
-                marginBottom: 8,
-                borderWidth: 1,
-                borderColor: colors.borderSoft,
-              }}
-            >
-              <Text style={{ color: '#b6c0d4', lineHeight: 20 }}>{log.message}</Text>
-              <Text style={{ color: '#7d8799', marginTop: 8, fontSize: 12 }}>
-                {log.sent_at ? new Date(log.sent_at).toLocaleString() : ''}
-              </Text>
-            </View>
+              title="Triggered alert"
+              body={log.message}
+              timeLabel={log.sent_at ? new Date(log.sent_at).toLocaleString() : ''}
+              badgeLabel="Log"
+              badgeTone="forecast"
+              style={{ marginBottom: 8 }}
+            />
           ))
         ) : (
           <EmptyState title="No trigger logs yet" body="Triggered alerts will appear here with timestamps." />

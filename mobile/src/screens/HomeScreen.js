@@ -13,7 +13,9 @@ import { DirectionChip } from '../components/DirectionChip'
 import { Badge } from '../components/Badge'
 import { EmptyState } from '../components/EmptyState'
 import { LoadingState } from '../components/LoadingState'
+import { NotificationCard } from '../components/NotificationCard'
 import { SectionHeader } from '../components/SectionHeader'
+import { SummaryCard } from '../components/SummaryCard'
 import { useAppState } from '../state/AppContext'
 import { loadAlertLogs } from '../services/alertService'
 import { loadInsightsDashboard } from '../services/performanceService'
@@ -24,26 +26,6 @@ import {
   removeWatchlistItem,
 } from '../services/userService'
 import { colors } from '../theme/colors'
-
-function SummaryCard({ title, value, subtitle }) {
-  return (
-    <View
-      style={{
-        width: '48.5%',
-        backgroundColor: '#131a2b',
-        borderRadius: 18,
-        padding: 15,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.borderSoft,
-      }}
-    >
-      <Text style={{ color: '#8ea0c0', fontSize: 12, fontWeight: '700' }}>{title}</Text>
-      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 8 }}>{value}</Text>
-      {subtitle ? <Text style={{ color: colors.muted, marginTop: 6 }}>{subtitle}</Text> : null}
-    </View>
-  )
-}
 
 function WatchlistCard({ item, onPress }) {
   const moveColor = item.change > 0 ? colors.up : item.change < 0 ? colors.down : colors.muted
@@ -221,13 +203,23 @@ export function HomeScreen({ navigation }) {
         />
       ) : null}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, marginTop: 8 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>Market summary</Text>
-      </View>
+      <SectionHeader title="Market summary" />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        <SummaryCard title="Strongest mover" value={strongest ? `${formatSymbol(strongest.symbol)} ${strongest.change_pct}%` : 'Waiting'} />
-        <SummaryCard title="Weakest mover" value={weakest ? `${formatSymbol(weakest.symbol)} ${weakest.change_pct}%` : 'Waiting'} />
-        <SummaryCard title="Highest volatility" value={volatilitySpike ? formatSymbol(volatilitySpike.symbol) : 'Normal'} />
+        <SummaryCard
+          title="Strongest mover"
+          value={strongest ? `${formatSymbol(strongest.symbol)} ${strongest.change_pct}%` : 'Waiting'}
+          style={{ width: '48.5%', marginBottom: 12 }}
+        />
+        <SummaryCard
+          title="Weakest mover"
+          value={weakest ? `${formatSymbol(weakest.symbol)} ${weakest.change_pct}%` : 'Waiting'}
+          style={{ width: '48.5%', marginBottom: 12 }}
+        />
+        <SummaryCard
+          title="Highest volatility"
+          value={volatilitySpike ? formatSymbol(volatilitySpike.symbol) : 'Normal'}
+          style={{ width: '48.5%', marginBottom: 12 }}
+        />
         <SummaryCard
           title="Best confidence"
           value={
@@ -235,6 +227,7 @@ export function HomeScreen({ navigation }) {
               ? `${formatSymbol(bestConfidence.symbol)} ${Math.round((bestConfidence.performance_adjusted_confidence ?? bestConfidence.raw_confidence ?? 0) * 100)}%`
               : 'Waiting'
           }
+          style={{ width: '48.5%', marginBottom: 12 }}
         />
       </View>
 
@@ -285,28 +278,17 @@ export function HomeScreen({ navigation }) {
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginBottom: 10 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>Recent notifications</Text>
-        <Text style={{ color: '#7cc7ff', fontSize: 13, fontWeight: '700' }}>See all</Text>
-      </View>
+      <SectionHeader title="Recent notifications" actionLabel="See all" />
       {(notifications ?? []).slice(0, 2).map((log) => (
-        <View
+        <NotificationCard
           key={log.id}
-          style={{
-            backgroundColor: '#131a2b',
-            borderRadius: 18,
-            padding: 15,
-            marginBottom: 10,
-            borderWidth: 1,
-            borderColor: colors.borderSoft,
-          }}
-        >
-          <Text style={{ color: colors.text, fontSize: 15, fontWeight: '800' }}>Alert event</Text>
-          <Text style={{ color: '#b6c0d4', fontSize: 13, lineHeight: 20, marginTop: 8 }}>{log.message}</Text>
-          <Text style={{ color: '#7d8799', fontSize: 12, marginTop: 10 }}>
-            {log.sent_at ? new Date(log.sent_at).toLocaleString() : ''}
-          </Text>
-        </View>
+          title="Alert event"
+          body={log.message}
+          timeLabel={log.sent_at ? new Date(log.sent_at).toLocaleString() : ''}
+          badgeLabel="Alert"
+          badgeTone="warning"
+          style={{ marginBottom: 10 }}
+        />
       ))}
       {!notifications.length ? (
         <EmptyState
