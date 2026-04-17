@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +22,27 @@ class Settings(BaseSettings):
   expo_push_access_token: str = ""
   feature_macro_calendar_enabled: bool = False
   feature_news_sentiment_enabled: bool = False
+
+  @field_validator("app_env", mode="before")
+  @classmethod
+  def _default_app_env(cls, value: str | None) -> str:
+    if value is None or not str(value).strip():
+      return "development"
+    return str(value).strip()
+
+  @field_validator("database_url", mode="before")
+  @classmethod
+  def _default_database_url(cls, value: str | None) -> str:
+    if value is None or not str(value).strip():
+      return "sqlite:///./forex_pulse.db"
+    return str(value).strip()
+
+  @field_validator("forex_provider_url", mode="before")
+  @classmethod
+  def _default_provider_url(cls, value: str | None) -> str:
+    if value is None or not str(value).strip():
+      return "https://api.frankfurter.dev/v1"
+    return str(value).strip()
 
 
 settings = Settings()
