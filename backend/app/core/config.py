@@ -42,7 +42,10 @@ class Settings(BaseSettings):
   def _default_provider_url(cls, value: str | None) -> str:
     if value is None or not str(value).strip():
       return "https://api.frankfurter.dev/v1"
-    return str(value).strip()
+    normalized = str(value).strip()
+    if not normalized.startswith(("http://", "https://")):
+      return "https://api.frankfurter.dev/v1"
+    return normalized
 
 
 settings = Settings()
