@@ -25,6 +25,7 @@ import {
   loadWatchlist,
   removeWatchlistItem,
 } from '../services/userService'
+import { prefetchPairDashboards } from '../services/forexService'
 import { colors } from '../theme/colors'
 
 function WatchlistCard({ item, onPress }) {
@@ -150,6 +151,11 @@ export function HomeScreen({ navigation }) {
     refreshData()
   }, [])
 
+  useEffect(() => {
+    if (!data?.pairs?.length) return
+    prefetchPairDashboards(data.pairs.map((item) => item.symbol), '30d')
+  }, [data.pairs])
+
   const strongest = insights?.movers?.strongest?.[0]
   const weakest = insights?.movers?.weakest?.[0]
   const volatilitySpike = insights?.volatility?.results?.find((item) => item.spike)
@@ -158,9 +164,11 @@ export function HomeScreen({ navigation }) {
       (b.performance_adjusted_confidence ?? b.raw_confidence ?? 0) -
       (a.performance_adjusted_confidence ?? a.raw_confidence ?? 0),
   )[0]
-  const latestCaptureText = data.pairs?.[0]?.capturedAt
-    ? new Date(data.pairs[0].capturedAt).toLocaleString()
-    : 'Waiting for sync'
+  const latestCaptureText = data.updatedMinutesAgo != null
+    ? `${data.updatedMinutesAgo} min ago`
+    : data.pairs?.[0]?.capturedAt
+      ? new Date(data.pairs[0].capturedAt).toLocaleString()
+      : 'Waiting for sync'
 
   return (
     <ScrollView
@@ -171,10 +179,10 @@ export function HomeScreen({ navigation }) {
       <View style={{ marginTop: 10, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View>
           <Text style={{ color: colors.text, fontSize: 28, fontWeight: '900' }}>Forex Pulse</Text>
-          <Text style={{ color: '#98a2b3', marginTop: 6, fontSize: 13 }}>Latest sync: {latestCaptureText}</Text>
+          <Text style={{ color: '#98a2b3', marginTop: 6, fontSize: 13 }}>Updated: {latestCaptureText}</Text>
         </View>
         <View style={{ backgroundColor: '#16213d', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 }}>
-          <Text style={{ color: '#9ecbff', fontSize: 12, fontWeight: '800' }}>{stale ? 'Cached View' : 'Live Market'}</Text>
+          <Text style={{ color: '#9ecbff', fontSize: 12, fontWeight: '800' }}>{data.isStale || stale ? 'Delayed' : 'Live'}</Text>
         </View>
       </View>
 
@@ -234,11 +242,12 @@ export function HomeScreen({ navigation }) {
       <View style={{ backgroundColor: '#151c31', borderRadius: 22, padding: 16, marginTop: 6 }}>
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>Daily AI summary</Text>
         <Text style={{ color: '#d6deee', lineHeight: 21, marginTop: 10 }}>
-          {bestConfidence
-            ? `${formatSymbol(bestConfidence.symbol)} remains ${bestConfidence.direction} with ${
-                bestConfidence.volatility_regime
-              }. Confidence is adjusted by recent model performance, not certainty.`
-            : 'Summary appears after forecast and model ranking data loads.'}
+          {data.dailyAiSummary
+            ?? (bestConfidence
+              ? `${formatSymbol(bestConfidence.symbol)} remains ${bestConfidence.direction} with ${
+                  bestConfidence.volatility_regime
+                }. Confidence is adjusted by recent model performance, not certainty.`
+              : 'Summary appears after forecast and model ranking data loads.')}
         </Text>
       </View>
 
@@ -279,7 +288,7 @@ export function HomeScreen({ navigation }) {
       </View>
 
       <SectionHeader title="Recent notifications" actionLabel="See all" />
-      {(notifications ?? []).slice(0, 2).map((log) => (
+      {(data.notificationsPreview?.length ? data.notificationsPreview : notifications).slice(0, 2).map((log) => (
         <NotificationCard
           key={log.id}
           title="Alert event"

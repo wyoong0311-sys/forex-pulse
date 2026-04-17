@@ -16,14 +16,11 @@ import { EmptyState } from '../components/EmptyState'
 import { LoadingState } from '../components/LoadingState'
 import { PriceSparkline } from '../components/PriceSparkline'
 import { DATE_RANGES } from '../constants/pairs'
-import { createPriceAlert, loadAlerts } from '../services/alertService'
+import { createPriceAlert } from '../services/alertService'
 import {
-  loadPairDetail,
-  loadPairDetailCached,
-  loadPrediction,
-  loadPredictionCached,
+  loadPairDashboard,
+  loadPairDashboardCached,
 } from '../services/forexService'
-import { loadSymbolPerformance } from '../services/performanceService'
 import { colors } from '../theme/colors'
 
 function InfoCard({ title, children }) {
@@ -69,47 +66,27 @@ export function PairDetailScreen({ route }) {
   useEffect(() => {
     let active = true
     ;(async () => {
-      const [cachedDetail, cachedPrediction] = await Promise.all([
-        loadPairDetailCached(pair, range),
-        loadPredictionCached(pair),
-      ])
-      if (active && (cachedDetail || cachedPrediction)) {
-        if (cachedDetail) setDetail(cachedDetail)
-        if (cachedPrediction) setPrediction(cachedPrediction)
+      const cachedSnapshot = await loadPairDashboardCached(pair, range)
+      if (active && cachedSnapshot) {
+        setDetail(cachedSnapshot.detail)
+        setPrediction(cachedSnapshot.prediction)
+        setPerformance(cachedSnapshot.performance)
+        setPairAlerts(cachedSnapshot.pairAlerts ?? [])
         setStale(true)
       }
 
       try {
-        const [freshDetail, freshPrediction] = await Promise.all([
-          loadPairDetail(pair, range),
-          loadPrediction(pair),
-        ])
+        const freshSnapshot = await loadPairDashboard(pair, range)
         if (active) {
-          setDetail(freshDetail)
-          setPrediction(freshPrediction)
+          setDetail(freshSnapshot.detail)
+          setPrediction(freshSnapshot.prediction)
+          setPerformance(freshSnapshot.performance)
+          setPairAlerts(freshSnapshot.pairAlerts ?? [])
           setStale(false)
         }
       } catch {
         if (active) setStale(true)
       }
-
-      loadSymbolPerformance(pair.replace('/', ''))
-        .then((data) => {
-          if (active) setPerformance(data)
-        })
-        .catch(() => {
-          if (active) setPerformance(null)
-        })
-
-      loadAlerts(1)
-        .then((alerts) => {
-          if (active) {
-            setPairAlerts((alerts ?? []).filter((item) => item.symbol === pair.replace('/', '').toUpperCase()))
-          }
-        })
-        .catch(() => {
-          if (active) setPairAlerts([])
-        })
     })()
 
     return () => {
@@ -127,8 +104,8 @@ export function PairDetailScreen({ route }) {
         targetPrice: targetPrice || `${fallbackPrice}`,
       })
       setAlertStatus('Alert saved. It will trigger when backend checks cross your rule.')
-      const refreshed = await loadAlerts(1)
-      setPairAlerts((refreshed ?? []).filter((item) => item.symbol === pair.replace('/', '').toUpperCase()))
+      const refreshed = await loadPairDashboard(pair, range)
+      setPairAlerts(refreshed.pairAlerts ?? [])
     } catch {
       setAlertStatus('Could not save alert yet. Check backend connection.')
     }
@@ -145,12 +122,17 @@ export function PairDetailScreen({ route }) {
     )
   }
 
-  const updateTimeText = detail.capturedAt ? new Date(detail.capturedAt).toLocaleString() : 'Waiting for sync'
+  const updateTimeText = detail.updatedMinutesAgo != null
+    ? `${detail.updatedMinutesAgo} min ago`
+    : detail.capturedAt
+      ? new Date(detail.capturedAt).toLocaleString()
+      : 'Waiting for sync'
   const latestScore = performance?.latest
   const comparisons = performance?.comparisons ?? []
   const baselineScore = comparisons
     .filter((item) => item.model_name?.includes('baseline') && item.samples_used > 0)
     .sort((a, b) => a.mae - b.mae)[0]
+  const trustSummary = performance?.trust ?? null
   const bestScored = comparisons
     .filter((item) => item.samples_used > 0)
     .sort((a, b) => a.mae - b.mae)
@@ -206,7 +188,7 @@ export function PairDetailScreen({ route }) {
       </View>
 
       <Text style={{ color: '#7d8799', fontSize: 12, marginTop: 12, marginBottom: 14 }}>
-        Last updated: {updateTimeText}
+        Updated: {updateTimeText}
       </Text>
       {stale || detail.isStale ? (
         <Text style={{ color: '#ffd27a', marginBottom: 10 }}>
@@ -278,10 +260,10 @@ export function PairDetailScreen({ route }) {
       </View>
 
       <ModelTrustCard
-        beatBaselineCount={beatBaselineCount}
-        totalRuns={bestScored.length || 0}
-        directionalAccuracy={latestScore?.directional_accuracy ?? null}
-        confidenceDelta={confidenceDelta}
+        beatBaselineCount={trustSummary?.beat_baseline_count ?? beatBaselineCount}
+        totalRuns={trustSummary?.total_runs ?? bestScored.length || 0}
+        directionalAccuracy={trustSummary?.directional_accuracy ?? latestScore?.directional_accuracy ?? null}
+        confidenceDelta={trustSummary?.confidence_delta ?? confidenceDelta}
       />
 
       <View style={{ height: 12 }} />

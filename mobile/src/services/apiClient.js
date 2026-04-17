@@ -41,6 +41,9 @@ async function request(path, options = {}) {
 
 export const apiClient = {
   getDashboard: () => request('/api/v1/dashboard'),
+  getHomeDashboard: (userId = 1) => request(`/api/v1/dashboard/home?user_id=${userId}`),
+  getPairDashboard: (symbol, range = '30d', userId = 1) =>
+    request(`/api/v1/dashboard/pair/${encodeURIComponent(symbol)}?range=${encodeURIComponent(range)}&user_id=${userId}`),
   getLatestRates: (symbols) => request(`/rates/latest?symbols=${encodeURIComponent(symbols)}`),
   getRateHistory: (symbol, range = '30d') => request(`/rates/history/${symbol}?range=${range}`),
   getPairDetail: (pair) => request(`/api/v1/pairs/${encodeURIComponent(pair)}`),

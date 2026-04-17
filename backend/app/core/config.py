@@ -18,6 +18,13 @@ class Settings(BaseSettings):
   provider_timeout_seconds: float = 12.0
   provider_retry_attempts: int = 3
   notification_retry_attempts: int = 2
+  latest_rates_cache_ttl_seconds: int = 900
+  latest_rates_cache_stale_ttl_seconds: int = 3600
+  history_rates_cache_ttl_seconds: int = 21600
+  history_rates_cache_stale_ttl_seconds: int = 43200
+  dashboard_cache_ttl_seconds: int = 300
+  dashboard_cache_stale_ttl_seconds: int = 900
+  stale_data_minutes: int = 120
   expo_push_api_url: str = "https://exp.host/--/api/v2/push/send"
   expo_push_access_token: str = ""
   feature_macro_calendar_enabled: bool = False
