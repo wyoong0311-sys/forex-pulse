@@ -2,11 +2,10 @@ import React from 'react'
 import { Text, View } from 'react-native'
 import { colors } from '../theme/colors'
 import { sharedStyles } from '../theme/styles'
-import { Badge } from './Badge'
+import { ConfidenceBadge } from './ConfidenceBadge'
+import { DirectionChip } from './DirectionChip'
 
 export function ForecastCard({ prediction }) {
-  const directionTone = prediction.direction === 'bearish' ? 'down' : prediction.direction === 'bullish' ? 'up' : 'warning'
-
   return (
     <View style={sharedStyles.card}>
       <View style={[sharedStyles.row, { alignItems: 'flex-start', marginBottom: 14 }]}>
@@ -14,7 +13,7 @@ export function ForecastCard({ prediction }) {
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: '900' }}>Forecast board</Text>
           <Text style={{ color: colors.muted, marginTop: 4 }}>Performance-aware forecast, not trading advice.</Text>
         </View>
-        <Badge label={prediction.direction} tone={directionTone} />
+        <DirectionChip direction={prediction.direction} />
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -24,9 +23,7 @@ export function ForecastCard({ prediction }) {
         </View>
         <View style={[sharedStyles.cardSoft, { flex: 1, minWidth: '47%' }]}>
           <Text style={{ color: colors.muted, marginBottom: 6 }}>Confidence</Text>
-          <Text style={{ color: colors.accent, fontSize: 22, fontWeight: '900' }}>
-            {Math.round(prediction.confidence * 100)}%
-          </Text>
+          <ConfidenceBadge confidence={prediction.confidence} />
         </View>
       </View>
 
@@ -44,7 +41,7 @@ export function ForecastCard({ prediction }) {
         <View style={sharedStyles.row}>
           <Text style={{ color: colors.muted }}>Target</Text>
           <Text style={{ color: colors.text, fontWeight: '800' }}>
-            {prediction.forecastTargetTime ?? 'next close'}
+            {prediction.forecastTargetTime ? new Date(prediction.forecastTargetTime).toLocaleString() : 'next close'}
           </Text>
         </View>
       </View>

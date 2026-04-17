@@ -100,6 +100,7 @@ export async function loadPairDetail(pair, range = '30d') {
       history,
       prediction: [],
       source: latest.source,
+      capturedAt: latest.captured_at,
       fallbackUsed: historyData.fallback_used,
     }
     await writeCache(pairDetailKey(pair, range), payload)

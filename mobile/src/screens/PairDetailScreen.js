@@ -4,11 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { MetricCard } from '../components/MetricCard'
 import { PriceSparkline } from '../components/PriceSparkline'
 import { ForecastCard } from '../components/ForecastCard'
+import { AccuracyCard } from '../components/AccuracyCard'
 import { AlertForm } from '../components/AlertForm'
 import { Badge } from '../components/Badge'
+import { DirectionChip } from '../components/DirectionChip'
 import { Screen } from '../components/Screen'
 import { DATE_RANGES } from '../constants/pairs'
-import { createPriceAlert } from '../services/alertService'
+import { createPriceAlert, loadAlerts } from '../services/alertService'
 import {
   loadPairDetail,
   loadPairDetailCached,
@@ -29,6 +31,7 @@ export function PairDetailScreen({ route }) {
   const [targetPrice, setTargetPrice] = useState('')
   const [alertStatus, setAlertStatus] = useState('')
   const [stale, setStale] = useState(false)
+  const [pairAlerts, setPairAlerts] = useState([])
 
   useEffect(() => {
     let active = true
@@ -62,6 +65,17 @@ export function PairDetailScreen({ route }) {
         }
       }
       loadSymbolPerformance(pair.replace('/', '')).then(setPerformance).catch(() => setPerformance(null))
+      loadAlerts(1)
+        .then((alerts) => {
+          if (active) {
+            setPairAlerts((alerts ?? []).filter((item) => item.symbol === pair.replace('/', '').toUpperCase()))
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setPairAlerts([])
+          }
+        })
     })()
     return () => {
       active = false
@@ -90,16 +104,22 @@ export function PairDetailScreen({ route }) {
         targetPrice: targetPrice || `${fallbackPrice}`,
       })
       setAlertStatus('Alert saved. It will trigger when backend checks cross your rule.')
+      const refreshed = await loadAlerts(1)
+      setPairAlerts((refreshed ?? []).filter((item) => item.symbol === pair.replace('/', '').toUpperCase()))
     } catch {
       setAlertStatus('Could not save alert yet. Check backend connection.')
     }
   }
 
-  const directionTone = prediction.direction === 'bearish' ? 'down' : prediction.direction === 'bullish' ? 'up' : 'warning'
   const confidencePct = Math.round(prediction.confidence * 100)
   const latestScore = performance?.latest
+  const baselineScore = [...(performance?.comparisons ?? [])]
+    .filter((item) => item.model_name?.includes('baseline') && item.samples_used > 0)
+    .sort((a, b) => a.mae - b.mae)[0]
+  const updateTimeText = detail.capturedAt ? new Date(detail.capturedAt).toLocaleString() : 'Waiting for sync'
   const indicatorCopy = [
-    `Range: ${detail.projectedRange}`,
+    `Observed range: ${detail.projectedRange}`,
+    `Expected move: ${prediction.expectedMovePct}%`,
     `Source: ${detail.source}${detail.fallbackUsed ? ' fallback' : ''}`,
     `Model: ${prediction.modelVersion}`,
   ]
@@ -125,7 +145,7 @@ export function PairDetailScreen({ route }) {
             </Text>
             <Text style={{ color: colors.text, fontSize: 36, fontWeight: '900', marginTop: 8 }}>{pair}</Text>
           </View>
-          <Badge label={prediction.direction} tone={prediction.direction === 'bearish' ? 'down' : prediction.direction === 'bullish' ? 'up' : 'warning'} />
+          <DirectionChip direction={prediction.direction} />
         </View>
 
         <View>
@@ -139,6 +159,7 @@ export function PairDetailScreen({ route }) {
         <Text style={{ color: colors.mutedStrong, lineHeight: 21 }}>
           Updated from {detail.source}. Forecast is separated from actual market history and is not financial advice.
         </Text>
+        <Text style={{ color: colors.muted, fontSize: 12 }}>Last update: {updateTimeText}</Text>
       </LinearGradient>
       {stale ? <Text style={{ color: colors.muted }}>Showing cached pair data while backend refreshes.</Text> : null}
 
@@ -163,10 +184,14 @@ export function PairDetailScreen({ route }) {
         ))}
       </View>
 
-      <View style={sharedStyles.card}>
+      <View style={[sharedStyles.card, { paddingBottom: 22 }]}>
         <View style={[sharedStyles.row, { marginBottom: 8 }]}>
-          <Text style={{ color: colors.text, fontSize: 20, fontWeight: '900' }}>Actual vs forecast</Text>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '900' }}>Actual vs forecast</Text>
           <Badge label={range.toUpperCase()} tone="neutral" />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          <Badge label="Actual (solid)" tone="neutral" />
+          <Badge label="Forecast (dashed)" tone="forecast" />
         </View>
         <PriceSparkline
           values={detail.history}
@@ -179,7 +204,7 @@ export function PairDetailScreen({ route }) {
       </View>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        <MetricCard label="Direction" value={prediction.direction} tone={directionTone} />
+        <MetricCard label="Direction" value={prediction.direction} tone={prediction.direction === 'bearish' ? 'down' : prediction.direction === 'bullish' ? 'up' : 'warning'} />
         <MetricCard label="Confidence" value={`${confidencePct}%`} tone="up" />
         <MetricCard label="Projected Range" value={`${prediction.projectedLow} - ${prediction.projectedHigh}`} />
         <MetricCard label="Expected Move" value={`${prediction.expectedMovePct}%`} />
@@ -187,30 +212,7 @@ export function PairDetailScreen({ route }) {
 
       <ForecastCard prediction={prediction} />
 
-      <View style={sharedStyles.card}>
-        <View style={[sharedStyles.row, { marginBottom: 10 }]}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900' }}>Accuracy card</Text>
-          <Badge label={latestScore?.model_name ?? 'Waiting'} tone="forecast" />
-        </View>
-        {latestScore ? (
-          <View style={{ gap: 8 }}>
-            <View style={sharedStyles.row}>
-              <Text style={{ color: colors.muted }}>Directional accuracy</Text>
-              <Text style={{ color: colors.text, fontWeight: '800' }}>{latestScore.directional_accuracy}%</Text>
-            </View>
-            <View style={sharedStyles.row}>
-              <Text style={{ color: colors.muted }}>Recent MAE</Text>
-              <Text style={{ color: colors.text, fontWeight: '800' }}>{latestScore.mae}</Text>
-            </View>
-            <View style={sharedStyles.row}>
-              <Text style={{ color: colors.muted }}>Samples scored</Text>
-              <Text style={{ color: colors.text, fontWeight: '800' }}>{latestScore.samples_used}</Text>
-            </View>
-          </View>
-        ) : (
-          <Text style={{ color: colors.muted }}>Accuracy appears after backtests run for this pair.</Text>
-        )}
-      </View>
+      <AccuracyCard latest={latestScore} baseline={baselineScore} title="Accuracy card" />
 
       <View style={sharedStyles.card}>
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 10 }}>
@@ -223,13 +225,28 @@ export function PairDetailScreen({ route }) {
         ))}
       </View>
 
-      <AlertForm
-        alertType={alertType}
-        targetPrice={targetPrice}
-        onChangeAlertType={setAlertType}
-        onChangeTargetPrice={setTargetPrice}
-        onSubmit={submitAlert}
-      />
+      <View style={sharedStyles.card}>
+        <View style={[sharedStyles.row, { marginBottom: 10 }]}>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '900' }}>Alert controls</Text>
+          <Badge label={`${pairAlerts.length} active`} tone={pairAlerts.length ? 'up' : 'neutral'} />
+        </View>
+        {pairAlerts.length ? (
+          pairAlerts.slice(0, 2).map((item) => (
+            <Text key={item.id} style={{ color: colors.muted, marginBottom: 6 }}>
+              {item.alert_type} {item.target_price}
+            </Text>
+          ))
+        ) : (
+          <Text style={{ color: colors.muted, marginBottom: 10 }}>No active alerts for this pair yet.</Text>
+        )}
+        <AlertForm
+          alertType={alertType}
+          targetPrice={targetPrice}
+          onChangeAlertType={setAlertType}
+          onChangeTargetPrice={setTargetPrice}
+          onSubmit={submitAlert}
+        />
+      </View>
       {alertStatus ? <Text style={{ color: colors.muted }}>{alertStatus}</Text> : null}
     </Screen>
   )
