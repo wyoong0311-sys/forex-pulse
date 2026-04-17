@@ -1,16 +1,42 @@
 import { appConfig } from '../config/appConfig'
 
 async function request(path, options = {}) {
-  const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers ?? {}) },
-    ...options,
-  })
+  const {
+    timeoutMs = 8000,
+    retry = 1,
+    ...fetchOptions
+  } = options
+  const method = (fetchOptions.method ?? 'GET').toUpperCase()
+  const retryable = method === 'GET'
+  let lastError
 
-  if (!response.ok) {
-    throw new Error(`API error ${response.status}`)
+  for (let attempt = 0; attempt <= retry; attempt += 1) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      const response = await fetch(`${appConfig.apiBaseUrl}${path}`, {
+        headers: { 'Content-Type': 'application/json', ...(fetchOptions.headers ?? {}) },
+        ...fetchOptions,
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error ${response.status}`)
+      }
+
+      return response.json()
+    } catch (error) {
+      lastError = error
+      const exhausted = attempt >= retry
+      if (exhausted || !retryable) {
+        break
+      }
+    } finally {
+      clearTimeout(timeoutId)
+    }
   }
-
-  return response.json()
+  throw lastError ?? new Error('API request failed')
 }
 
 export const apiClient = {

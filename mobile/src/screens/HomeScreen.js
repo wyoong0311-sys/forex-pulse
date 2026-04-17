@@ -24,7 +24,7 @@ export function HomeScreen({ navigation }) {
     () => (watchlist.length ? watchlist.map((item) => item.symbol).join(',') : 'USDMYR,EURUSD,GBPUSD,USDJPY'),
     [watchlist],
   )
-  const { data, loading } = useDashboardData(symbols)
+  const { data, loading, stale } = useDashboardData(symbols)
   const { selectedPair, setSelectedPair } = useAppState()
 
   async function refreshWatchlist() {
@@ -103,7 +103,7 @@ export function HomeScreen({ navigation }) {
               Daily market command center
             </Text>
           </View>
-          <Badge label="Live data" tone="forecast" />
+          <Badge label={stale ? 'Cached view' : 'Live data'} tone={stale ? 'warning' : 'forecast'} />
         </View>
 
         <Text style={{ color: colors.mutedStrong, lineHeight: 21 }}>
@@ -127,6 +127,7 @@ export function HomeScreen({ navigation }) {
       </LinearGradient>
 
       {loading ? <ActivityIndicator color={colors.accent} /> : null}
+      {stale ? <Text style={{ color: colors.muted }}>Showing cached data while backend refreshes.</Text> : null}
       {watchlistStatus ? <Text style={{ color: colors.muted }}>{watchlistStatus}</Text> : null}
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
@@ -247,16 +248,35 @@ export function HomeScreen({ navigation }) {
             ))}
           </View>
         </View>
-        {sortedPairs.map((pair) => (
-          <PairCard
-            key={pair.symbol}
-            pair={pair}
-            onPress={() => {
-              setSelectedPair(pair.symbol)
-              navigation.navigate('PairDetail', { pair: pair.symbol })
-            }}
-          />
-        ))}
+        {sortedPairs.length ? (
+          sortedPairs.map((pair) => (
+            <PairCard
+              key={pair.symbol}
+              pair={pair}
+              onPress={() => {
+                setSelectedPair(pair.symbol)
+                navigation.navigate('PairDetail', { pair: pair.symbol })
+              }}
+            />
+          ))
+        ) : loading ? (
+          [...Array(3)].map((_, index) => (
+            <View
+              key={index}
+              style={{
+                borderRadius: 18,
+                backgroundColor: colors.panel,
+                borderColor: colors.border,
+                borderWidth: 1,
+                padding: 16,
+                gap: 10,
+              }}
+            >
+              <View style={{ width: '42%', height: 14, borderRadius: 999, backgroundColor: colors.panelAlt }} />
+              <View style={{ width: '68%', height: 12, borderRadius: 999, backgroundColor: colors.panelAlt }} />
+            </View>
+          ))
+        ) : null}
       </View>
 
       <View style={sharedStyles.card}>

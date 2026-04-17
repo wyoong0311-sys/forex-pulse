@@ -9,7 +9,12 @@ import { Badge } from '../components/Badge'
 import { Screen } from '../components/Screen'
 import { DATE_RANGES } from '../constants/pairs'
 import { createPriceAlert } from '../services/alertService'
-import { loadPairDetail, loadPrediction } from '../services/forexService'
+import {
+  loadPairDetail,
+  loadPairDetailCached,
+  loadPrediction,
+  loadPredictionCached,
+} from '../services/forexService'
 import { loadSymbolPerformance } from '../services/performanceService'
 import { colors } from '../theme/colors'
 import { sharedStyles } from '../theme/styles'
@@ -23,17 +28,54 @@ export function PairDetailScreen({ route }) {
   const [alertType, setAlertType] = useState('above')
   const [targetPrice, setTargetPrice] = useState('')
   const [alertStatus, setAlertStatus] = useState('')
+  const [stale, setStale] = useState(false)
 
   useEffect(() => {
-    loadPairDetail(pair, range).then(setDetail)
-    loadPrediction(pair).then(setPrediction)
-    loadSymbolPerformance(pair.replace('/', '')).then(setPerformance).catch(() => setPerformance(null))
+    let active = true
+    ;(async () => {
+      const [cachedDetail, cachedPrediction] = await Promise.all([
+        loadPairDetailCached(pair, range),
+        loadPredictionCached(pair),
+      ])
+      if (active && (cachedDetail || cachedPrediction)) {
+        if (cachedDetail) {
+          setDetail(cachedDetail)
+        }
+        if (cachedPrediction) {
+          setPrediction(cachedPrediction)
+        }
+        setStale(true)
+      }
+      try {
+        const [freshDetail, freshPrediction] = await Promise.all([
+          loadPairDetail(pair, range),
+          loadPrediction(pair),
+        ])
+        if (active) {
+          setDetail(freshDetail)
+          setPrediction(freshPrediction)
+          setStale(false)
+        }
+      } catch {
+        if (active) {
+          setStale(true)
+        }
+      }
+      loadSymbolPerformance(pair.replace('/', '')).then(setPerformance).catch(() => setPerformance(null))
+    })()
+    return () => {
+      active = false
+    }
   }, [pair, range])
 
   if (!detail || !prediction) {
     return (
       <Screen>
         <ActivityIndicator color={colors.accent} />
+        <View style={[sharedStyles.card, { marginTop: 14, gap: 10 }]}>
+          <View style={{ width: '48%', height: 14, borderRadius: 999, backgroundColor: colors.panelAlt }} />
+          <View style={{ width: '72%', height: 12, borderRadius: 999, backgroundColor: colors.panelAlt }} />
+        </View>
       </Screen>
     )
   }
@@ -98,6 +140,7 @@ export function PairDetailScreen({ route }) {
           Updated from {detail.source}. Forecast is separated from actual market history and is not financial advice.
         </Text>
       </LinearGradient>
+      {stale ? <Text style={{ color: colors.muted }}>Showing cached pair data while backend refreshes.</Text> : null}
 
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         {DATE_RANGES.map((item) => (

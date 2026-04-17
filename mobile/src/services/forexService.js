@@ -1,8 +1,33 @@
 import { historySeed, pairCards } from '../data/mockData'
 import { apiClient } from './apiClient'
+import { readCache, writeCache } from './cacheStore'
 
 function normalizePair(pair) {
   return pair.replace('/', '').toUpperCase()
+}
+
+function dashboardKey(symbols) {
+  return `dashboard:${symbols}`
+}
+
+function pairDetailKey(pair, range) {
+  return `pair_detail:${normalizePair(pair)}:${range}`
+}
+
+function predictionKey(pair) {
+  return `prediction:${normalizePair(pair)}`
+}
+
+export function loadDashboardCached(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
+  return readCache(dashboardKey(symbols))
+}
+
+export function loadPairDetailCached(pair, range = '30d') {
+  return readCache(pairDetailKey(pair, range))
+}
+
+export function loadPredictionCached(pair) {
+  return readCache(predictionKey(pair))
 }
 
 export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
@@ -17,7 +42,7 @@ export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
         item.performance_adjusted_confidence ?? item.raw_confidence ?? 0,
       ])
     )
-    return {
+    const payload = {
       pairs: data.rates.map((rate) => ({
         symbol: `${rate.symbol.slice(0, 3)}/${rate.symbol.slice(3)}`,
         price: rate.close,
@@ -32,6 +57,8 @@ export async function loadDashboard(symbols = 'USDMYR,EURUSD,GBPUSD,USDJPY') {
         { label: 'Fallback', value: data.rates.some((rate) => rate.source.includes('mock')) ? 'Used' : 'Off', tone: 'up' },
       ],
     }
+    await writeCache(dashboardKey(symbols), payload)
+    return payload
   } catch {
     return {
       pairs: pairCards,
@@ -57,7 +84,7 @@ export async function loadPairDetail(pair, range = '30d') {
     const previous = history.at(-2) ?? latest.close
     const dailyChangePct = previous ? ((latest.close - previous) / previous) * 100 : 0
 
-    return {
+    const payload = {
       pair,
       latestPrice: latest.close,
       dailyChangePct,
@@ -68,6 +95,8 @@ export async function loadPairDetail(pair, range = '30d') {
       source: latest.source,
       fallbackUsed: historyData.fallback_used,
     }
+    await writeCache(pairDetailKey(pair, range), payload)
+    return payload
   } catch {
     return {
       pair,
@@ -86,7 +115,7 @@ export async function loadPairDetail(pair, range = '30d') {
 export async function loadPrediction(pair) {
   try {
     const data = await apiClient.getPrediction(pair)
-    return {
+    const payload = {
       pair: data.pair,
       direction: data.direction,
       confidence: data.confidence_score ?? data.confidence,
@@ -98,6 +127,8 @@ export async function loadPrediction(pair) {
       predictionTime: data.prediction_time,
       forecastTargetTime: data.forecast_target_time,
     }
+    await writeCache(predictionKey(pair), payload)
+    return payload
   } catch {
     return {
       pair,
