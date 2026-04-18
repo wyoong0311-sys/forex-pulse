@@ -261,7 +261,7 @@ export function PairDetailScreen({ route }) {
 
       <ModelTrustCard
         beatBaselineCount={trustSummary?.beat_baseline_count ?? beatBaselineCount}
-        totalRuns={trustSummary?.total_runs ?? bestScored.length || 0}
+        totalRuns={trustSummary?.total_runs ?? (bestScored.length || 0)}
         directionalAccuracy={trustSummary?.directional_accuracy ?? latestScore?.directional_accuracy ?? null}
         confidenceDelta={trustSummary?.confidence_delta ?? confidenceDelta}
       />

@@ -9,10 +9,18 @@ on:
       - "mobile/**"
       - ".github/workflows/android-apk-free.yml"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_apk:
     name: Build APK
     runs-on: ubuntu-latest
+    timeout-minutes: 40
 
     defaults:
       run:
@@ -25,7 +33,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: "mobile/package-lock.json"
 
@@ -34,6 +42,7 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
+          cache: "gradle"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -71,7 +80,15 @@ jobs:
           EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
 
       - name: Expo prebuild (Android)
-        run: CI=1 npx expo prebuild --platform android
+        shell: bash
+        run: |
+          set -o pipefail
+          CI=1 npx expo prebuild --platform android --non-interactive 2>&1 | tee expo-prebuild.log
+
+      - name: Verify Gradle wrapper
+        shell: bash
+        run: |
+          test -f android/gradlew || (echo "android/gradlew missing after prebuild" && exit 1)
 
       - name: Build release APK
         shell: bash
@@ -85,6 +102,8 @@ jobs:
         if: failure()
         shell: bash
         run: |
+          echo "==== Last 120 lines of expo-prebuild.log ===="
+          tail -n 120 expo-prebuild.log || true
           echo "==== Last 200 lines of gradle-build.log ===="
           tail -n 200 gradle-build.log || true
 
@@ -93,7 +112,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: forex-pulse-${{ env.APP_VERSION_CODE }}-build-logs
-          path: mobile/gradle-build.log
+          path: |
+            mobile/gradle-build.log
+            mobile/expo-prebuild.log
           if-no-files-found: warn
 
       - name: Upload release APK artifact
