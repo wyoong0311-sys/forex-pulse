@@ -18,7 +18,7 @@ import { SectionHeader } from '../components/SectionHeader'
 import { SummaryCard } from '../components/SummaryCard'
 import { useAppState } from '../state/AppContext'
 import { loadAlertLogs } from '../services/alertService'
-import { loadInsightsDashboard } from '../services/performanceService'
+import { loadInsightsDashboard, loadInsightsDashboardCached } from '../services/performanceService'
 import {
   addWatchlistSymbol,
   formatSymbol,
@@ -102,6 +102,7 @@ export function HomeScreen({ navigation }) {
   const [watchlistStatus, setWatchlistStatus] = useState('Loading watchlist...')
   const [insights, setInsights] = useState(null)
   const [notifications, setNotifications] = useState([])
+  const [refreshing, setRefreshing] = useState(false)
   const symbols = useMemo(
     () => (watchlist.length ? watchlist.map((item) => item.symbol).join(',') : 'USDMYR,EURUSD,GBPUSD,USDJPY'),
     [watchlist],
@@ -120,11 +121,18 @@ export function HomeScreen({ navigation }) {
   }
 
   async function refreshData() {
-    await Promise.all([
-      refreshWatchlist(),
-      loadInsightsDashboard().then(setInsights).catch(() => setInsights(null)),
-      loadAlertLogs(1).then(setNotifications).catch(() => setNotifications([])),
-    ])
+    setRefreshing(true)
+    try {
+      await refreshWatchlist()
+      loadInsightsDashboard()
+        .then(setInsights)
+        .catch(() => {})
+      loadAlertLogs(1)
+        .then(setNotifications)
+        .catch(() => {})
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   async function addSymbol() {
@@ -148,6 +156,11 @@ export function HomeScreen({ navigation }) {
   }
 
   useEffect(() => {
+    loadInsightsDashboardCached().then((cached) => {
+      if (cached) {
+        setInsights(cached)
+      }
+    })
     refreshData()
   }, [])
 
@@ -156,8 +169,8 @@ export function HomeScreen({ navigation }) {
     prefetchPairDashboards(data.pairs.map((item) => item.symbol), '30d')
   }, [data.pairs])
 
-  const strongest = insights?.movers?.strongest?.[0]
-  const weakest = insights?.movers?.weakest?.[0]
+  const strongest = insights?.movers?.strongest?.[0] ?? data.marketSummary?.strongestMover ?? null
+  const weakest = insights?.movers?.weakest?.[0] ?? data.marketSummary?.weakestMover ?? null
   const volatilitySpike = insights?.volatility?.results?.find((item) => item.spike)
   const bestConfidence = [...(insights?.forecasts?.results ?? [])].sort(
     (a, b) =>
@@ -170,11 +183,41 @@ export function HomeScreen({ navigation }) {
       ? new Date(data.pairs[0].capturedAt).toLocaleString()
       : 'Waiting for sync'
 
+  function summarizeMover(mover, fallbackLabel = 'Waiting') {
+    if (!mover) {
+      return fallbackLabel
+    }
+    if (typeof mover === 'string') {
+      return mover
+    }
+    const symbol = formatSymbol(mover.symbol ?? '')
+    const change = mover.change_pct
+    if (symbol && typeof change === 'number') {
+      return `${symbol} ${change > 0 ? '+' : ''}${change}%`
+    }
+    return symbol || fallbackLabel
+  }
+
+  const strongestLabel = summarizeMover(strongest)
+  const weakestLabel = summarizeMover(weakest)
+  const highestVolatilityLabel =
+    volatilitySpike ? formatSymbol(volatilitySpike.symbol) : data.marketSummary?.highestVolatility ?? 'Normal'
+  const bestConfidenceLabel =
+    bestConfidence
+      ? `${formatSymbol(bestConfidence.symbol)} ${Math.round((bestConfidence.performance_adjusted_confidence ?? bestConfidence.raw_confidence ?? 0) * 100)}%`
+      : data.marketSummary?.bestConfidence ?? 'Waiting'
+  const opportunityTitle =
+    strongest && typeof strongest === 'object'
+      ? `${formatSymbol(strongest.symbol)} trend holding`
+      : strongestLabel !== 'Waiting'
+        ? `${strongestLabel} trend holding`
+        : 'Waiting for mover'
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#0b1020' }}
       contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
-      refreshControl={<RefreshControl refreshing={false} onRefresh={refreshData} tintColor="#fff" />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} tintColor="#fff" />}
     >
       <View style={{ marginTop: 10, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <View>
@@ -215,26 +258,22 @@ export function HomeScreen({ navigation }) {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <SummaryCard
           title="Strongest mover"
-          value={strongest ? `${formatSymbol(strongest.symbol)} ${strongest.change_pct}%` : 'Waiting'}
+          value={strongestLabel}
           style={{ width: '48.5%', marginBottom: 12 }}
         />
         <SummaryCard
           title="Weakest mover"
-          value={weakest ? `${formatSymbol(weakest.symbol)} ${weakest.change_pct}%` : 'Waiting'}
+          value={weakestLabel}
           style={{ width: '48.5%', marginBottom: 12 }}
         />
         <SummaryCard
           title="Highest volatility"
-          value={volatilitySpike ? formatSymbol(volatilitySpike.symbol) : 'Normal'}
+          value={highestVolatilityLabel}
           style={{ width: '48.5%', marginBottom: 12 }}
         />
         <SummaryCard
           title="Best confidence"
-          value={
-            bestConfidence
-              ? `${formatSymbol(bestConfidence.symbol)} ${Math.round((bestConfidence.performance_adjusted_confidence ?? bestConfidence.raw_confidence ?? 0) * 100)}%`
-              : 'Waiting'
-          }
+          value={bestConfidenceLabel}
           style={{ width: '48.5%', marginBottom: 12 }}
         />
       </View>
@@ -270,7 +309,7 @@ export function HomeScreen({ navigation }) {
         <View style={{ backgroundColor: '#10281d', borderRadius: 18, padding: 16, marginBottom: 10 }}>
           <Text style={{ color: '#9fb3d6', fontSize: 12, fontWeight: '800' }}>OPPORTUNITY</Text>
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 8 }}>
-            {strongest ? `${formatSymbol(strongest.symbol)} trend holding` : 'Waiting for mover'}
+            {opportunityTitle}
           </Text>
           <Text style={{ color: '#d6deee', fontSize: 13, lineHeight: 20, marginTop: 8 }}>
             Confidence and direction are ranked from model output and recent performance.

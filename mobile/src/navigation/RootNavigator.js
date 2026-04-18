@@ -2,6 +2,7 @@ import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { Text } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors } from '../theme/colors'
 import { AlertsScreen } from '../screens/AlertsScreen'
 import { HomeScreen } from '../screens/HomeScreen'
@@ -48,6 +49,10 @@ function tabIcon(label) {
 }
 
 export function RootNavigator() {
+  const insets = useSafeAreaInsets()
+  const tabBarBottom = Math.max(insets.bottom, 8) + 6
+  const tabBarHeight = 58 + tabBarBottom
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -56,14 +61,14 @@ export function RootNavigator() {
           position: 'absolute',
           left: 14,
           right: 14,
-          bottom: 14,
+          bottom: tabBarBottom,
           backgroundColor: colors.panel,
           borderTopColor: 'transparent',
           borderTopWidth: 0,
           borderRadius: 22,
-          height: 70,
-          paddingBottom: 10,
-          paddingTop: 10,
+          height: tabBarHeight,
+          paddingBottom: Math.max(insets.bottom, 8),
+          paddingTop: 8,
           elevation: 18,
           shadowColor: '#000',
           shadowOpacity: 0.35,

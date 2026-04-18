@@ -1,4 +1,7 @@
 import { apiClient } from './apiClient'
+import { readCache, writeCache } from './cacheStore'
+
+const INSIGHTS_CACHE_KEY = 'insights:dashboard'
 
 export async function loadPerformanceSummary() {
   return apiClient.getPredictionPerformanceSummary()
@@ -16,5 +19,11 @@ export async function loadInsightsDashboard() {
     apiClient.getForecastSummary(),
   ])
 
-  return { volatility, movers, rankings, forecasts }
+  const payload = { volatility, movers, rankings, forecasts }
+  await writeCache(INSIGHTS_CACHE_KEY, payload)
+  return payload
+}
+
+export function loadInsightsDashboardCached() {
+  return readCache(INSIGHTS_CACHE_KEY)
 }
