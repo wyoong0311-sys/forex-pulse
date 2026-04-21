@@ -72,4 +72,11 @@ export const apiClient = {
   getAlertLogs: (userId = 1) => request(`/api/v1/alerts/logs/${userId}`),
   registerDeviceToken: (payload) =>
     request('/api/v1/devices/register-token', { method: 'POST', body: JSON.stringify(payload) }),
+  getTradingStatus: (userId = 1) => request(`/api/v1/trading/status?user_id=${userId}`),
+  connectCTrader: (payload) =>
+    request('/api/v1/trading/connect/ctrader', { method: 'POST', body: JSON.stringify(payload) }),
+  createTradeOrder: (payload) =>
+    request('/api/v1/trading/orders', { method: 'POST', body: JSON.stringify(payload) }),
+  getTradeOrders: (userId = 1, limit = 50) =>
+    request(`/api/v1/trading/orders/${userId}?limit=${limit}`),
 }

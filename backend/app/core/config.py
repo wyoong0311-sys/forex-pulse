@@ -27,6 +27,16 @@ class Settings(BaseSettings):
   stale_data_minutes: int = 120
   expo_push_api_url: str = "https://exp.host/--/api/v2/push/send"
   expo_push_access_token: str = ""
+  trading_enabled: bool = False
+  trading_dry_run: bool = True
+  trading_max_units_per_order: float = 10000.0
+  trading_allowed_symbols: str = "USDMYR,EURUSD,GBPUSD,USDJPY"
+  ctrader_mode: str = "demo"
+  ctrader_account_id: str = ""
+  ctrader_bridge_url: str = ""
+  ctrader_bridge_api_key: str = ""
+  ctrader_timeout_seconds: float = 10.0
+  ctrader_retry_attempts: int = 2
   feature_macro_calendar_enabled: bool = False
   feature_news_sentiment_enabled: bool = False
 

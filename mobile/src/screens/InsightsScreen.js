@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ScrollView, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Badge } from '../components/Badge'
 import { AccuracyCard } from '../components/AccuracyCard'
 import { EmptyState } from '../components/EmptyState'
@@ -29,6 +30,8 @@ function StatPill({ label, value }) {
 }
 
 export function InsightsScreen() {
+  const insets = useSafeAreaInsets()
+  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
   const [summary, setSummary] = useState([])
   const [symbolPerformance, setSymbolPerformance] = useState(null)
   const [insights, setInsights] = useState({
@@ -81,7 +84,7 @@ export function InsightsScreen() {
     .sort((a, b) => Math.abs(b.upper_bound - b.lower_bound) - Math.abs(a.upper_bound - a.lower_bound))[0]
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: tabOverlayPadding }}>
       <View
         style={{
           backgroundColor: '#131a2b',

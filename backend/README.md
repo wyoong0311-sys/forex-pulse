@@ -19,6 +19,10 @@ FastAPI starter for quotes, history, prediction, alerts, and backtesting.
 - `GET /api/v1/insights/top-movers`
 - `GET /api/v1/insights/model-rankings`
 - `GET /api/v1/insights/forecast-summary`
+- `GET /api/v1/trading/status?user_id=1`
+- `POST /api/v1/trading/connect/ctrader`
+- `POST /api/v1/trading/orders`
+- `GET /api/v1/trading/orders/{user_id}`
 - `GET /api/v1/auth/session`
 - `GET /api/v1/watchlist/{user_id}`
 - `POST /api/v1/watchlist`
@@ -116,3 +120,31 @@ Invoke-RestMethod 'http://127.0.0.1:8000/predictions/performance-summary' | Conv
 - Phase 6 adds structured logs, environment validation, health checks, scheduler overlap protection, and production environment notes.
 - Phase 7 adds model rankings, performance-adjusted confidence, volatility regimes, top movers, and forecast summaries without buy/sell advice.
 - Phase 8 adds auth-ready user persistence, persistent watchlists, saved preferences, daily summary payloads, and CSV exports.
+- cTrader integration is demo-safe by default (`TRADING_DRY_RUN=true`). Real order routing requires your `CTRADER_BRIDGE_URL` endpoint to be configured.
+
+## cTrader quick start (demo-safe)
+
+1. Keep dry-run mode enabled:
+
+```bash
+TRADING_ENABLED=true
+TRADING_DRY_RUN=true
+```
+
+2. Register connection metadata:
+
+```powershell
+Invoke-RestMethod 'http://127.0.0.1:8000/api/v1/trading/connect/ctrader' -Method Post -ContentType 'application/json' -Body '{"user_id":1,"mode":"demo","account_id":"your-demo-account-id","is_enabled":true}'
+```
+
+3. Submit a test market order (simulated):
+
+```powershell
+Invoke-RestMethod 'http://127.0.0.1:8000/api/v1/trading/orders' -Method Post -ContentType 'application/json' -Body '{"user_id":1,"symbol":"EURUSD","side":"buy","volume_units":1000}'
+```
+
+4. View order log:
+
+```powershell
+Invoke-RestMethod 'http://127.0.0.1:8000/api/v1/trading/orders/1'
+```

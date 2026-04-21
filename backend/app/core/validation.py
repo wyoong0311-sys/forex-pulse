@@ -26,6 +26,15 @@ def validate_environment() -> list[str]:
         warnings.append(
             "FIREBASE_CREDENTIALS_PATH must point to a valid Firebase service account JSON when mock notifications are disabled in production."
         )
+    if is_production and settings.trading_enabled and settings.trading_dry_run:
+        warnings.append("TRADING_DRY_RUN should be false in production only after demo validation.")
+    if (
+        is_production
+        and settings.trading_enabled
+        and not settings.trading_dry_run
+        and not settings.ctrader_bridge_url.strip()
+    ):
+        warnings.append("CTRADER_BRIDGE_URL is required for live trading mode.")
 
     if warnings and is_production:
         for warning in warnings:

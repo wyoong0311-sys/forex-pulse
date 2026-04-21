@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Badge } from '../components/Badge'
 import { AlertCard } from '../components/AlertCard'
 import { EmptyState } from '../components/EmptyState'
@@ -21,6 +22,8 @@ const TYPES = [
 ]
 
 export function AlertsScreen() {
+  const insets = useSafeAreaInsets()
+  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
   const { selectedPair } = useAppState()
   const [symbol, setSymbol] = useState(selectedPair.replace('/', ''))
   const [alertType, setAlertType] = useState('above')
@@ -70,7 +73,7 @@ export function AlertsScreen() {
   const recentLogs = useMemo(() => (logs ?? []).slice(0, 5), [logs])
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: tabOverlayPadding }}>
       <View
         style={{
           backgroundColor: '#131a2b',

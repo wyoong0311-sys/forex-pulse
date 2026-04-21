@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { ConfidenceBadge } from '../components/ConfidenceBadge'
 import { DirectionChip } from '../components/DirectionChip'
@@ -97,6 +98,8 @@ function WatchlistCard({ item, onPress }) {
 }
 
 export function HomeScreen({ navigation }) {
+  const insets = useSafeAreaInsets()
+  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
   const [watchlist, setWatchlist] = useState([])
   const [newSymbol, setNewSymbol] = useState('')
   const [watchlistStatus, setWatchlistStatus] = useState('Loading watchlist...')
@@ -216,7 +219,7 @@ export function HomeScreen({ navigation }) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#0b1020' }}
-      contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
+      contentContainerStyle={{ padding: 18, paddingBottom: tabOverlayPadding }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} tintColor="#fff" />}
     >
       <View style={{ marginTop: 10, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

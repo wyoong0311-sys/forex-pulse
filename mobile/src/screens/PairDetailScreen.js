@@ -5,6 +5,7 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ConfidenceBadge } from '../components/ConfidenceBadge'
 import { DirectionChip } from '../components/DirectionChip'
 import { ModelTrustCard } from '../components/ModelTrustCard'
@@ -52,6 +53,8 @@ function KeyValueRow({ label, value }) {
 }
 
 export function PairDetailScreen({ route }) {
+  const insets = useSafeAreaInsets()
+  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
   const pair = route.params?.pair ?? 'EUR/USD'
   const [detail, setDetail] = useState(null)
   const [prediction, setPrediction] = useState(null)
@@ -159,7 +162,7 @@ export function PairDetailScreen({ route }) {
   }, [prediction, detail])
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: tabOverlayPadding }}>
       <View style={{ marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View>
           <Text style={{ color: '#91a2c4', fontSize: 14, fontWeight: '800', letterSpacing: 0.5 }}>

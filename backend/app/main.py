@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routes import alerts, backtests, dashboard, devices, exports, health, insights, notifications, pairs, predictions, rates, users
+from app.api.routes import alerts, backtests, dashboard, devices, exports, health, insights, notifications, pairs, predictions, rates, trading, users
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.validation import validate_environment
@@ -29,6 +29,7 @@ app.include_router(users.router, prefix="/api/v1", tags=["users"])
 app.include_router(exports.router, prefix="/api/v1", tags=["exports"])
 app.include_router(backtests.router, prefix="/api/v1", tags=["backtests"])
 app.include_router(predictions.router, prefix="/api/v1", tags=["predictions"])
+app.include_router(trading.router, prefix="/api/v1", tags=["trading"])
 app.include_router(alerts.router, prefix="/api/v1", tags=["alerts"])
 app.include_router(devices.router, prefix="/api/v1", tags=["devices"])
 app.include_router(notifications.router, prefix="/api/v1", tags=["notifications"])
@@ -44,3 +45,4 @@ app.include_router(users.router, tags=["users"])
 app.include_router(exports.router, tags=["exports"])
 app.include_router(backtests.router, tags=["backtests"])
 app.include_router(predictions.router, tags=["predictions"])
+app.include_router(trading.router, tags=["trading"])

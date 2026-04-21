@@ -122,3 +122,36 @@ class BacktestResult(Base):
     beats_baseline: Mapped[bool] = mapped_column(Boolean, default=False)
     notes: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class BrokerConnection(Base):
+    __tablename__ = "broker_connections"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    broker: Mapped[str] = mapped_column(String(32), default="ctrader", index=True)
+    mode: Mapped[str] = mapped_column(String(16), default="demo")
+    account_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class TradeOrder(Base):
+    __tablename__ = "trade_orders"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    side: Mapped[str] = mapped_column(String(8))
+    volume_units: Mapped[float] = mapped_column(Float)
+    order_type: Mapped[str] = mapped_column(String(16), default="market")
+    stop_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
+    take_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(24), default="pending")
+    execution_mode: Mapped[str] = mapped_column(String(24), default="dry-run")
+    execution_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_order_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    requested_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    filled_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

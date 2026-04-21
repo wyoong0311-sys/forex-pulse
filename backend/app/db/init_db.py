@@ -1,7 +1,19 @@
 from sqlalchemy import inspect, text
 
 from app.db.base import Base
-from app.db.models import Alert, AlertLog, BacktestResult, DeviceToken, Prediction, Rate, User, UserPreference, WatchlistItem
+from app.db.models import (
+    Alert,
+    AlertLog,
+    BacktestResult,
+    BrokerConnection,
+    DeviceToken,
+    Prediction,
+    Rate,
+    TradeOrder,
+    User,
+    UserPreference,
+    WatchlistItem,
+)
 from app.db.session import engine
 
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Badge } from '../components/Badge'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
@@ -10,6 +11,8 @@ import { loadDailySummary, loadPreferences, savePreferences } from '../services/
 import { colors } from '../theme/colors'
 
 export function SettingsScreen() {
+  const insets = useSafeAreaInsets()
+  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
   const [pushStatus, setPushStatus] = useState('Not connected')
   const [saveStatus, setSaveStatus] = useState('Loading saved preferences...')
   const [dailySummary, setDailySummary] = useState(null)
@@ -69,7 +72,7 @@ export function SettingsScreen() {
   }, [])
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#0b1020' }} contentContainerStyle={{ padding: 18, paddingBottom: tabOverlayPadding }}>
       <View
         style={{
           backgroundColor: '#131a2b',
