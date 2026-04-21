@@ -50,22 +50,19 @@ function tabIcon(label) {
 
 export function RootNavigator() {
   const insets = useSafeAreaInsets()
-  const tabBarBottom = Math.max(insets.bottom, 8) + 6
-  const tabBarHeight = 58 + tabBarBottom
+  const tabBarHeight = 64 + Math.max(insets.bottom, 8)
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          position: 'absolute',
-          left: 14,
-          right: 14,
-          bottom: tabBarBottom,
           backgroundColor: colors.panel,
           borderTopColor: 'transparent',
           borderTopWidth: 0,
-          borderRadius: 22,
+          borderTopLeftRadius: 18,
+          borderTopRightRadius: 18,
           height: tabBarHeight,
           paddingBottom: Math.max(insets.bottom, 8),
           paddingTop: 8,

@@ -5,7 +5,7 @@ import { sharedStyles } from '../theme/styles'
 
 export function Screen({ children }) {
   const insets = useSafeAreaInsets()
-  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
+  const tabOverlayPadding = Math.max(insets.bottom + 24, 32)
 
   return (
     <SafeAreaView style={sharedStyles.screen}>

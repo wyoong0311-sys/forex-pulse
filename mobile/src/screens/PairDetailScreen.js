@@ -54,7 +54,7 @@ function KeyValueRow({ label, value }) {
 
 export function PairDetailScreen({ route }) {
   const insets = useSafeAreaInsets()
-  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
+  const tabOverlayPadding = Math.max(insets.bottom + 24, 32)
   const pair = route.params?.pair ?? 'EUR/USD'
   const [detail, setDetail] = useState(null)
   const [prediction, setPrediction] = useState(null)

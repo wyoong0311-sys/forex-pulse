@@ -99,7 +99,7 @@ function WatchlistCard({ item, onPress }) {
 
 export function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets()
-  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
+  const tabOverlayPadding = Math.max(insets.bottom + 24, 32)
   const [watchlist, setWatchlist] = useState([])
   const [newSymbol, setNewSymbol] = useState('')
   const [watchlistStatus, setWatchlistStatus] = useState('Loading watchlist...')

@@ -12,7 +12,7 @@ import { colors } from '../theme/colors'
 
 export function SettingsScreen() {
   const insets = useSafeAreaInsets()
-  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
+  const tabOverlayPadding = Math.max(insets.bottom + 24, 32)
   const [pushStatus, setPushStatus] = useState('Not connected')
   const [saveStatus, setSaveStatus] = useState('Loading saved preferences...')
   const [dailySummary, setDailySummary] = useState(null)

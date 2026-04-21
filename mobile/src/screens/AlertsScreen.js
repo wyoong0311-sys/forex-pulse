@@ -23,7 +23,7 @@ const TYPES = [
 
 export function AlertsScreen() {
   const insets = useSafeAreaInsets()
-  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
+  const tabOverlayPadding = Math.max(insets.bottom + 24, 32)
   const { selectedPair } = useAppState()
   const [symbol, setSymbol] = useState(selectedPair.replace('/', ''))
   const [alertType, setAlertType] = useState('above')

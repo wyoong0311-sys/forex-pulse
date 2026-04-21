@@ -31,7 +31,7 @@ function StatPill({ label, value }) {
 
 export function InsightsScreen() {
   const insets = useSafeAreaInsets()
-  const tabOverlayPadding = Math.max(insets.bottom + 130, 150)
+  const tabOverlayPadding = Math.max(insets.bottom + 24, 32)
   const [summary, setSummary] = useState([])
   const [symbolPerformance, setSymbolPerformance] = useState(null)
   const [insights, setInsights] = useState({
